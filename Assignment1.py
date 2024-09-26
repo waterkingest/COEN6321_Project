@@ -395,7 +395,7 @@ def write_file(best_solution):
 def localSearch(puzzle):
     best_fitness = calculateFitness(puzzle)
     best_puzzle = puzzle.copy()
-    for _ in range(500):  # 迭代次数
+    for _ in range(100):  # 迭代次数
         # 生成邻域解
         mutation_rate=0.8
         sigma=1.0
