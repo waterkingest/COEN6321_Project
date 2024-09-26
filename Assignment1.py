@@ -5,8 +5,9 @@ import numpy as np
 import copy
 Rowsize=8#8
 Colsize=8#8
-population_size=200
+population_size=100
 input_puzzle=[]
+children_Percent=0.25
 maxGeneration=100
 initial_mutation_rate=0.95
 final_mutation_rate=0.05
@@ -37,15 +38,30 @@ def calculatRowMisMatch(puzzleRow1,puzzleRow2):
     numberOfMisMatch=0
     for n,piece in enumerate(puzzleRow1):
         if piece[2]!=puzzleRow2[n][0]:
+            if n==0 or n==Rowsize-1: #边缘的权值更大
+                numberOfMisMatch+=1
             numberOfMisMatch+=1
     return numberOfMisMatch
 def calculatColMisMatch(puzzleCol1,puzzleCol2):
     numberOfMisMatch=0
     for n,piece in enumerate(puzzleCol1):
         if piece[1]!=puzzleCol2[n][3]:
+            if n==0 or n==Colsize-1: #边缘的权值更大
+                numberOfMisMatch+=1
             numberOfMisMatch+=1
     return numberOfMisMatch
-
+def calculatRowMisMatch2(puzzleRow1,puzzleRow2):
+    numberOfMisMatch=0
+    for n,piece in enumerate(puzzleRow1):
+        if piece[2]!=puzzleRow2[n][0]:
+            numberOfMisMatch+=1
+    return numberOfMisMatch
+def calculatColMisMatch2(puzzleCol1,puzzleCol2):
+    numberOfMisMatch=0
+    for n,piece in enumerate(puzzleCol1):
+        if piece[1]!=puzzleCol2[n][3]:
+            numberOfMisMatch+=1
+    return numberOfMisMatch
 def calculateFitness(puzzle):
     puzzle=[x[1] for x in puzzle]
     puzzle=np.array(puzzle).reshape(Rowsize, Colsize).tolist()
@@ -60,7 +76,20 @@ def calculateFitness(puzzle):
         fitness+=calculatColMisMatch(col1,col2)
     # fitness=-fitness
     return fitness
-
+def calculateMissmatch(puzzle):
+    puzzle=[x[1] for x in puzzle]
+    puzzle=np.array(puzzle).reshape(Rowsize, Colsize).tolist()
+    fitness=0
+    for n in range(Rowsize-1):
+        fitness+=calculatRowMisMatch2(puzzle[n],puzzle[n+1])
+    for n in range(Colsize-1):
+        col1,col2=[],[]
+        for i in range(Rowsize):
+            col1.append(puzzle[i][n])
+            col2.append(puzzle[i][n+1])
+        fitness+=calculatColMisMatch2(col1,col2)
+    # fitness=-fitness
+    return fitness
 # def mutation1(puzzle,mutation_rate):
 #     '''
 #     swap two pieces
@@ -118,7 +147,7 @@ def mutation2(puzzle, mutation_rate, sigma):
         for _ in range(rotation_numb):
             rotate_times = random.randint(1, 3)
             index = random.randint(0, Rowsize * Colsize - 1)
-            # puzzle[index][2] = (puzzle[index][2] + rotate_times) % 4
+            puzzle[index][2] = (puzzle[index][2] + rotate_times) % 4
             puzzle[index][1] = puzzle[index][1][-rotate_times:] + puzzle[index][1][:-rotate_times]
     puzzle = localSearch(puzzle)
     return puzzle
@@ -183,7 +212,7 @@ def Crossover(puzzle1,puzzle2,windowrow,windowcol):
 def encode_dictionary(puzzle):
     codeDictionary={}
     for i in range(1,Rowsize*Colsize+1):
-        codeDictionary[str(puzzle[i-1][0])]=puzzle[i-1][1]
+        codeDictionary[str(puzzle[i-1][0])]=[puzzle[i-1][1],puzzle[i-1][2]]
     return codeDictionary
 def find_puzzle2_edge(puzzle_list,element):
     index2=puzzle_list.index(element)
@@ -284,14 +313,7 @@ def select_perfect_element(edge_table,element):
         perfect_element=int(element)
         edge_table=update_edge_table(edge_table,perfect_element)
         return perfect_element,edge_table
-    # print(element,edges_list)
-
-    # if len(edges_list)==0:
-    #     perfect_element=int(element)
-    #     edge_table=update_edge_table(edge_table,perfect_element)
-    #     return perfect_element,edge_table
     edge_length_list=[len(edge_table[str(x)]) for x in edges_list]
-    # print(edges_list,edge_length_list)
     temp_list=[]
     for edge in edges_list:
         if edge not in temp_list:
@@ -320,12 +342,8 @@ def EdgeRecombination(puzzle1,puzzle2):
     c1,c2=[],[]
     for i in range(1,Rowsize*Colsize):
         c1.append(select_element1)
-        
         c2.append(select_element2)
-        # print('c1,c2',c1,c2)
-        # print('C1')
         select_element1,edge_table1=select_perfect_element(edge_table1,select_element1)
-        # print('C2')
         select_element2,edge_table2=select_perfect_element(edge_table2,select_element2)
     c1.append(select_element1)
     c2.append(select_element2)
@@ -355,17 +373,14 @@ def EdgeRecombination2D(puzzle1,puzzle2):
             else:
                 c1[i][-j-1]=select_element1
                 c2[i][-j-1]=select_element2
-            # print('c1,c2',c1,c2)
-            # print('C1')
             if i==Rowsize-1 and j==Colsize-1:
                 break
             select_element1,edge_table1=select_perfect_element(edge_table1,select_element1)
-            # print('C2')
             select_element2,edge_table2=select_perfect_element(edge_table2,select_element2)
     c1=flatten(c1)
     c2=flatten(c2)
-    child1=[[x,puzzle1_code[str(x)]]for x in c1]
-    child2=[[x,puzzle2_code[str(x)]]for x in c2]
+    child1=[[x,puzzle1_code[str(x)][0],puzzle1_code[str(x)][1]]for x in c1]
+    child2=[[x,puzzle2_code[str(x)][0],puzzle2_code[str(x)][1]]for x in c2]
     return child1,child2
 def write_file(best_solution):
     best_solution=reshape(best_solution,Rowsize,Colsize)
@@ -420,33 +435,35 @@ def main():
     while fitness_board[fitness_board.index(min(fitness_board))]>0 and Generation<maxGeneration:
         mutation_rate = self_adaptive_Pm(initial_mutation_rate, final_mutation_rate, Generation, maxGeneration)
         sigma = self_adaptive_Pm(initial_sigma, final_sigma, Generation, maxGeneration)
-        random_parent=random.sample(range(0, population_size), 10)
+        random_parent=random.sample(range(0, population_size), int(population_size*children_Percent))
         windows=[[i,population[i]] for i in random_parent]
         windows.sort(key=lambda x:calculateFitness(x[1]))
         new_population=[]
-        parent1=windows[0][1]
-        parent2=windows[1][1]
-        #child1,child2=Crossover(parent1,parent2,2,2)
-        # child1,child2=EdgeRecombination(parent1,parent2)
-        child1,child2=EdgeRecombination2D(parent1,parent2)
-        child1=mutation1(child1,mutation_rate,sigma)
-        child2=mutation1(child2,mutation_rate,sigma)
-        child1=mutation2(child1,mutation_rate,sigma)
-        child2=mutation2(child2,mutation_rate,sigma)
-        new_population.append(child1)
-        new_population.append(child2)
+        for parent_select in range(len(windows)//2):
+            parent1=windows[parent_select*2][1]
+            parent2=windows[parent_select*2+1][1]
+            #child1,child2=Crossover(parent1,parent2,2,2)
+            # child1,child2=EdgeRecombination(parent1,parent2)
+            child1,child2=EdgeRecombination2D(parent1,parent2)
+            child1=mutation1(child1,mutation_rate,sigma)
+            child2=mutation1(child2,mutation_rate,sigma)
+            child1=mutation2(child1,mutation_rate,sigma)
+            child2=mutation2(child2,mutation_rate,sigma)
+            new_population.append(child1)
+            new_population.append(child2)
         new_population.sort(key=lambda x:calculateFitness(x))
         for offspring in new_population:
-            for index,old_population in enumerate(windows[-2:]):
+            for index,old_population in enumerate(windows):
                 if calculateFitness(offspring)<calculateFitness(old_population[1]):
-                    windows[index-2][1]=offspring
+                    windows[index][1]=offspring
                     break
         for new_offspring in windows:
             population[new_offspring[0]]=new_offspring[1]
         fitness_board=list(map(calculateFitness,population))
         best_fitness=min(fitness_board)
+        mismatch_Board=list(map(calculateMissmatch,population))
         Generation+=1
-        print(f'Generation {Generation}: Best Fitness = {best_fitness}')
+        print(f'Generation {Generation}: Best Fitness = {best_fitness} :Best Mismatch = {mismatch_Board[fitness_board.index(min(fitness_board))]}')
         best_individual=population[fitness_board.index(best_fitness)]
         best_individual=localSearch(best_individual)
         population[fitness_board.index(best_fitness)]=best_individual
