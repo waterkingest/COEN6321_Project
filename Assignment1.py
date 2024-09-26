@@ -7,8 +7,8 @@ Rowsize=8#8
 Colsize=8#8
 population_size=100
 input_puzzle=[]
-children_Percent=0.25
-maxGeneration=100
+children_Percent=0.45
+maxGeneration=300
 initial_mutation_rate=0.95
 final_mutation_rate=0.05
 initial_sigma=Rowsize*Colsize*0.2
@@ -105,7 +105,7 @@ def calculateMissmatch(puzzle):
 #     # puzzle=localSearch(puzzle)
 #     return puzzle
 def self_adaptive_Pm(initial_value,final_value,generation,maxgeneration):#self-daptive probability of mutation
-    return 0.9#initial_value-(initial_value-final_value)*(generation/maxgeneration)
+    return initial_value-(initial_value-final_value)*(generation/maxgeneration)
 
 def mutation1(puzzle, mutation_rate, sigma):
     '''
@@ -149,7 +149,7 @@ def mutation2(puzzle, mutation_rate, sigma):
             index = random.randint(0, Rowsize * Colsize - 1)
             puzzle[index][2] = (puzzle[index][2] + rotate_times) % 4
             puzzle[index][1] = puzzle[index][1][-rotate_times:] + puzzle[index][1][:-rotate_times]
-    puzzle = localSearch(puzzle)
+    # puzzle = localSearch(puzzle)
     return puzzle
 
 def reshape(matrix,row,col):
@@ -395,7 +395,7 @@ def write_file(best_solution):
 def localSearch(puzzle):
     best_fitness = calculateFitness(puzzle)
     best_puzzle = puzzle.copy()
-    for _ in range(100):  # 迭代次数
+    for _ in range(200):  # 迭代次数
         # 生成邻域解
         mutation_rate=0.8
         sigma=1.0
@@ -442,7 +442,7 @@ def main():
         for parent_select in range(len(windows)//2):
             parent1=windows[parent_select*2][1]
             parent2=windows[parent_select*2+1][1]
-            #child1,child2=Crossover(parent1,parent2,2,2)
+            # child1,child2=Crossover(parent1,parent2,2,2)
             # child1,child2=EdgeRecombination(parent1,parent2)
             child1,child2=EdgeRecombination2D(parent1,parent2)
             child1=mutation1(child1,mutation_rate,sigma)
@@ -451,12 +451,15 @@ def main():
             child2=mutation2(child2,mutation_rate,sigma)
             new_population.append(child1)
             new_population.append(child2)
+        new_population+=[x[1] for x in windows]
         new_population.sort(key=lambda x:calculateFitness(x))
-        for offspring in new_population:
-            for index,old_population in enumerate(windows):
-                if calculateFitness(offspring)<calculateFitness(old_population[1]):
-                    windows[index][1]=offspring
-                    break
+        # for offspring in new_population:
+        #     for index,old_population in enumerate(windows):
+        #         if calculateFitness(offspring)<calculateFitness(old_population[1]):
+        #             windows[index][1]=offspring
+        #             break
+        for index,old_population in enumerate(windows):
+            windows[index][1]=new_population[index]
         for new_offspring in windows:
             population[new_offspring[0]]=new_offspring[1]
         fitness_board=list(map(calculateFitness,population))
