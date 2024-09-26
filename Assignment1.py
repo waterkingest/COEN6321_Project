@@ -1,15 +1,17 @@
 # hyper parameter
 import random
+import os
 import numpy as np
 import copy
-Rowsize=8
-Colsize=8
-offspringPercent=0.7
-population_size=100
+Rowsize=8#8
+Colsize=8#8
+population_size=200
 input_puzzle=[]
 maxGeneration=100
-swap_probability=80
-rotate_probability=80
+initial_mutation_rate=0.95
+final_mutation_rate=0.05
+initial_sigma=Rowsize*Colsize*0.2
+final_sigma=1.0
 with open('Example_Input&Output\Ass1Input.txt', 'r') as f:
     for line in f:
         input_puzzle.append(line.strip().split(' '))
@@ -22,11 +24,11 @@ for i in range(1,Rowsize+1):
 def decode_dictionary(piece):
     return Code_dictionary[piece]
 
-def initionation():
+def initialization():
     population=[]
     for i in range(population_size):
         Code_puzzle = random.sample(range(1, Rowsize*Colsize+1), Rowsize*Colsize)
-        puzzle = [[x,decode_dictionary(str(x))]for x in Code_puzzle]
+        puzzle = [[x,decode_dictionary(str(x)),0]for x in Code_puzzle]
         population.append(puzzle)
     return population
 
@@ -59,37 +61,66 @@ def calculateFitness(puzzle):
     # fitness=-fitness
     return fitness
 
-def mutation1(puzzle):
+# def mutation1(puzzle,mutation_rate):
+#     '''
+#     swap two pieces
+#     '''
+#     probability = random.randint(1, 100)
+#     if probability <= 5:
+#         pass
+#     else:
+#         swap_numb=random.randint(1,Rowsize*Colsize-10)
+#         for _ in range(swap_numb):
+#             index1,index2=random.sample(range(Rowsize*Colsize),2)
+#             puzzle[index1],puzzle[index2]=puzzle[index2],puzzle[index1]
+#     # puzzle=localSearch(puzzle)
+#     return puzzle
+def self_adaptive_Pm(initial_value,final_value,generation,maxgeneration):#self-daptive probability of mutation
+    return 0.9#initial_value-(initial_value-final_value)*(generation/maxgeneration)
+
+def mutation1(puzzle, mutation_rate, sigma):
     '''
-    swap two pieces
+    Swap
     '''
-    global swap_probability
-    probability = random.randint(1, 100)
-    if probability <= 100-swap_probability:
-        pass
-    else:
-        swap_numb=random.randint(1,Rowsize*Colsize)
+    if random.random() < mutation_rate:
+        swap_numb = int(abs(np.random.normal(0, sigma)))
+        swap_numb = max(1, swap_numb)
         for _ in range(swap_numb):
-            index1,index2=random.sample(range(Rowsize*Colsize),2)
-            puzzle[index1],puzzle[index2]=puzzle[index2],puzzle[index1]
-    # puzzle=localSearch(puzzle)
+            index1, index2 = random.sample(range(Rowsize * Colsize), 2)
+            puzzle[index1], puzzle[index2] = puzzle[index2], puzzle[index1]
     return puzzle
-def mutation2(puzzle):
+
+# def mutation2(puzzle):
+#     '''
+#     rotate a piece
+#     '''
+#     probability = random.randint(1, 100)
+#     if probability <= 5:
+#         pass
+#     else:
+#         mutation2_numb=random.randint(1,Rowsize*Colsize)
+#         for _ in range(mutation2_numb):
+#             rotate_times=random.randint(1,3)
+
+#             index=random.randint(0,Rowsize*Colsize-1)
+#             # print(index,rotate_times)
+#             puzzle[index][2]=(puzzle[index][2]+rotate_times)%4
+#             puzzle[index][1]=puzzle[index][1][-rotate_times:]+puzzle[index][1][:-rotate_times]
+#     puzzle=localSearch(puzzle)
+#     return puzzle
+def mutation2(puzzle, mutation_rate, sigma):
     '''
-    rotate a piece
+    Rotate pieces with adaptive mutation rate and strength
     '''
-    global rotate_probability
-    probability = random.randint(1, 100)
-    if probability <= 100-rotate_probability:
-        pass
-    else:
-        mutation2_numb=random.randint(1,Rowsize*Colsize)
-        for _ in range(mutation2_numb):
-            rotate_times=random.randint(1,3)
-            index=random.randint(0,Rowsize*Colsize-1)
-            # print(index,rotate_times)
-            puzzle[index][1]=puzzle[index][1][-rotate_times:]+puzzle[index][1][:-rotate_times]
-    # puzzle=localSearch(puzzle)
+    if random.random() < mutation_rate:
+        rotation_numb = int(abs(np.random.normal(0, sigma)))
+        rotation_numb = max(1, rotation_numb)
+        for _ in range(rotation_numb):
+            rotate_times = random.randint(1, 3)
+            index = random.randint(0, Rowsize * Colsize - 1)
+            # puzzle[index][2] = (puzzle[index][2] + rotate_times) % 4
+            puzzle[index][1] = puzzle[index][1][-rotate_times:] + puzzle[index][1][:-rotate_times]
+    puzzle = localSearch(puzzle)
     return puzzle
 
 def reshape(matrix,row,col):
@@ -349,74 +380,81 @@ def write_file(best_solution):
 def localSearch(puzzle):
     best_fitness = calculateFitness(puzzle)
     best_puzzle = puzzle.copy()
-    for _ in range(100):  # 迭代次数
+    for _ in range(500):  # 迭代次数
         # 生成邻域解
-        neighbor = mutation1(puzzle.copy())
+        mutation_rate=0.8
+        sigma=1.0
+        neighbor = mutation1(puzzle.copy(),mutation_rate, sigma)
         fitness = calculateFitness(neighbor)
         if fitness < best_fitness:
             best_fitness = fitness
             best_puzzle = neighbor.copy()
     return best_puzzle
 
+
+def sum_distance(population):
+    dis_value=[]
+    for i in range(len(population)):
+        for j in range(i+1,len(population)):
+            dis_value[i]=cal_distance(population[i],population[j])
+    return dis_value
+                
+                
+def cal_distance(puzzle1,puzzle2):
+    for idv_tile in range(Colsize*Rowsize):
+        #如3142 与1423 的dis为1，3142 2872如果不匹配权重最大8
+        angle=abs((puzzle1[idv_tile][2]-puzzle2[idv_tile][2])%3+(puzzle1[idv_tile][2]-puzzle2[idv_tile][2])//3)
+        id_diff=puzzle1[idv_tile][0]-puzzle2[idv_tile][0]
+        if id_diff !=0:
+            distance=8     #set the weight
+        else:
+            distance=angle
+    return distance
+
+
 def main():
-    global swap_probability,rotate_probability
-    population=initionation()
+    population=initialization()
     fitness_board=list(map(calculateFitness,population))
     best_fitness=min(fitness_board)
     Generation=0
-    best_individual=population[fitness_board.index(best_fitness)]
-    fitness_list=[]
     while fitness_board[fitness_board.index(min(fitness_board))]>0 and Generation<maxGeneration:
-        # print(swap_probability,rotate_probability)
-        random_parent=random.sample(range(0, population_size), int(population_size*offspringPercent)) #随机选择offspringPercent的父代
+        mutation_rate = self_adaptive_Pm(initial_mutation_rate, final_mutation_rate, Generation, maxGeneration)
+        sigma = self_adaptive_Pm(initial_sigma, final_sigma, Generation, maxGeneration)
+        random_parent=random.sample(range(0, population_size), 10)
         windows=[[i,population[i]] for i in random_parent]
-        windows.append([fitness_board.index(best_fitness),best_individual])
         windows.sort(key=lambda x:calculateFitness(x[1]))
         new_population=[]
-        for i in range(len(windows)//2):
-            parent1=windows[i*2][1]
-            parent2=windows[i*2+1][1]
-            # child1,child2=Crossover(parent1,parent2,3,3)
-            # child1,child2=EdgeRecombination(parent1,parent2)
-            child1,child2=EdgeRecombination2D(parent1,parent2)
-            child1=mutation1(child1)
-            child2=mutation1(child2)
-            # child1=localSearch(child1)
-            # child2=localSearch(child2)
-            child1=mutation2(child1)
-            child2=mutation2(child2)
-            new_population.append(child1)
-            new_population.append(child2)
-        # windows+=new_population
-        # windows.sort(key=lambda x:calculateFitness(x))
-        # print(len(windows),len(new_population))
+        parent1=windows[0][1]
+        parent2=windows[1][1]
+        #child1,child2=Crossover(parent1,parent2,2,2)
+        # child1,child2=EdgeRecombination(parent1,parent2)
+        child1,child2=EdgeRecombination2D(parent1,parent2)
+        child1=mutation1(child1,mutation_rate,sigma)
+        child2=mutation1(child2,mutation_rate,sigma)
+        child1=mutation2(child1,mutation_rate,sigma)
+        child2=mutation2(child2,mutation_rate,sigma)
+        new_population.append(child1)
+        new_population.append(child2)
         new_population.sort(key=lambda x:calculateFitness(x))
         for offspring in new_population:
-            for index,old_population in enumerate(windows):
+            for index,old_population in enumerate(windows[-2:]):
                 if calculateFitness(offspring)<calculateFitness(old_population[1]):
-                    windows[index][1]=offspring
+                    windows[index-2][1]=offspring
                     break
         for new_offspring in windows:
             population[new_offspring[0]]=new_offspring[1]
         fitness_board=list(map(calculateFitness,population))
         best_fitness=min(fitness_board)
-        fitness_list.append(best_fitness)
         Generation+=1
-        print(best_fitness)
+        print(f'Generation {Generation}: Best Fitness = {best_fitness}')
         best_individual=population[fitness_board.index(best_fitness)]
         best_individual=localSearch(best_individual)
         population[fitness_board.index(best_fitness)]=best_individual
-        if Generation % 3 ==0:
-            if best_fitness==fitness_list[-3]:
-                swap_probability+=(100-swap_probability)*0.5
-                rotate_probability+=(100-rotate_probability)*0.5
-            else:
-                swap_probability*=0.85
-                rotate_probability*=0.85
-            # population.sort(key=lambda x:calculateFitness(x))
-            # num_replace = int(0.5 * population_size)
-            # new_individuals = initionation()[:num_replace]
-            # population[-num_replace:] = new_individuals
+        if Generation % 7 ==0:
+            population.sort(key=lambda x:calculateFitness(x))
+            num_replace = int(0.7 * population_size)
+            new_individuals = initialization()[:num_replace]
+            population[-num_replace:] = new_individuals
     best_solution=population[fitness_board.index(best_fitness)]
     write_file(best_solution)
 if __name__ == '__main__':
