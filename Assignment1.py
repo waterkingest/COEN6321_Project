@@ -5,15 +5,15 @@ import numpy as np
 import copy
 Rowsize=8#8
 Colsize=8#8
-population_size=100
+population_size=400
 input_puzzle=[]
 children_Percent=0.45
 maxGeneration=300
-initial_mutation_rate=0.95
-final_mutation_rate=0.05
-initial_sigma=Rowsize*Colsize*0.2
+initial_mutation_rate=0.9
+final_mutation_rate=0.005
+initial_sigma=Rowsize*Colsize*0.35
 final_sigma=1.0
-with open('Example_Input&Output\Ass1Input.txt', 'r') as f:
+with open(os.path.join(os.path.dirname(os.path.abspath(__file__)),'Example_Input&Output\Ass1Input.txt'), 'r') as f:
     for line in f:
         input_puzzle.append(line.strip().split(' '))
 Code_dictionary={}
@@ -104,19 +104,29 @@ def calculateMissmatch(puzzle):
 #             puzzle[index1],puzzle[index2]=puzzle[index2],puzzle[index1]
 #     # puzzle=localSearch(puzzle)
 #     return puzzle
-def self_adaptive_Pm(initial_value,final_value,generation,maxgeneration):#self-daptive probability of mutation
-    return initial_value-(initial_value-final_value)*(generation/maxgeneration)
+def self_adaptive_Pm(current_value,min_value,max_value,improvement_rate,threshold_high=0.01,threshold_low=0.001,decay_factor=0.9,growth_factor=1.1):#self-daptive probability of mutation
+    if improvement_rate>threshold_high:
+        new_value=max(current_value*decay_factor, min_value)
+    elif improvement_rate<threshold_low:
+        new_value=min(current_value*growth_factor, max_value)
+    else:
+        new_value = current_value
+    return new_value
 
 def mutation1(puzzle, mutation_rate, sigma):
     '''
     Swap
     '''
-    if random.random() < mutation_rate:
-        swap_numb = int(abs(np.random.normal(0, sigma)))
-        swap_numb = max(1, swap_numb)
+def mutation1(puzzle, mutation_rate, sigma):
+    '''
+    Swap
+    '''
+    if random.random()<mutation_rate:
+        swap_numb=int(abs(np.random.normal(0,sigma)))
+        swap_numb=max(1,swap_numb)
         for _ in range(swap_numb):
-            index1, index2 = random.sample(range(Rowsize * Colsize), 2)
-            puzzle[index1], puzzle[index2] = puzzle[index2], puzzle[index1]
+            index1,index2=random.sample(range(Rowsize*Colsize), 2)
+            puzzle[index1], puzzle[index2]=puzzle[index2], puzzle[index1]
     return puzzle
 
 # def mutation2(puzzle):
@@ -141,16 +151,18 @@ def mutation2(puzzle, mutation_rate, sigma):
     '''
     Rotate pieces with adaptive mutation rate and strength
     '''
-    if random.random() < mutation_rate:
-        rotation_numb = int(abs(np.random.normal(0, sigma)))
-        rotation_numb = max(1, rotation_numb)
+
+    if random.random()<mutation_rate:
+        rotation_numb=int(abs(np.random.normal(0, sigma)))
+        rotation_numb=max(1, rotation_numb)
         for _ in range(rotation_numb):
-            rotate_times = random.randint(1, 3)
-            index = random.randint(0, Rowsize * Colsize - 1)
+            rotate_times=random.randint(1, 3)
+            index=random.randint(0, Rowsize * Colsize - 1)
             puzzle[index][2] = (puzzle[index][2] + rotate_times) % 4
-            puzzle[index][1] = puzzle[index][1][-rotate_times:] + puzzle[index][1][:-rotate_times]
-    # puzzle = localSearch(puzzle)
+            puzzle[index][1]=puzzle[index][1][-rotate_times:]+puzzle[index][1][:-rotate_times]
+    puzzle=localSearch(puzzle)
     return puzzle
+
 
 def reshape(matrix,row,col):
     total_elements = row*col
@@ -395,9 +407,9 @@ def write_file(best_solution):
 def localSearch(puzzle):
     best_fitness = calculateFitness(puzzle)
     best_puzzle = puzzle.copy()
-    for _ in range(200):  # 迭代次数
+    for _ in range(666):  # 迭代次数
         # 生成邻域解
-        mutation_rate=0.8
+        mutation_rate=0.9
         sigma=1.0
         neighbor = mutation1(puzzle.copy(),mutation_rate, sigma)
         fitness = calculateFitness(neighbor)
@@ -431,10 +443,17 @@ def main():
     population=initialization()
     fitness_board=list(map(calculateFitness,population))
     best_fitness=min(fitness_board)
+    previous_best_fitness=best_fitness
+    mutation_rate=initial_mutation_rate
+    sigma=initial_sigma
     Generation=0
     while fitness_board[fitness_board.index(min(fitness_board))]>0 and Generation<maxGeneration:
-        mutation_rate = self_adaptive_Pm(initial_mutation_rate, final_mutation_rate, Generation, maxGeneration)
-        sigma = self_adaptive_Pm(initial_sigma, final_sigma, Generation, maxGeneration)
+        if previous_best_fitness != 0:    #self-adaptive mutayion
+            improvement_rate = (previous_best_fitness - best_fitness) / previous_best_fitness
+        else:
+            improvement_rate = 0
+        mutation_rate = self_adaptive_Pm(mutation_rate,final_mutation_rate,initial_mutation_rate,improvement_rate)#self-adaptive mutayion
+        sigma = self_adaptive_Pm(sigma,final_sigma,initial_sigma,improvement_rate)
         random_parent=random.sample(range(0, population_size), int(population_size*children_Percent))
         windows=[[i,population[i]] for i in random_parent]
         windows.sort(key=lambda x:calculateFitness(x[1]))
