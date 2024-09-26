@@ -5,7 +5,7 @@ import numpy as np
 import copy
 Rowsize=8#8
 Colsize=8#8
-population_size=300
+population_size=100
 input_puzzle=[]
 children_Percent=0.45
 maxGeneration=100
@@ -320,8 +320,8 @@ def EdgeRecombination(puzzle1,puzzle2):
         select_element2,edge_table2=select_perfect_element(edge_table2,select_element2)
     c1.append(select_element1)
     c2.append(select_element2)
-    child1=[[x,puzzle1_code[str(x)]]for x in c1]
-    child2=[[x,puzzle2_code[str(x)]]for x in c2]
+    child1=[[x,puzzle1_code[str(x)][0],puzzle1_code[str(x)][1]]for x in c1]
+    child2=[[x,puzzle2_code[str(x)][0],puzzle2_code[str(x)][1]]for x in c2]
     return child1,child2
 
 def EdgeRecombination2D(puzzle1,puzzle2):
@@ -432,9 +432,9 @@ def main():
             distance_matrix[index].sort(key=lambda x:x[0])
             select_index=random.randint(0,population_size-2)
             parent2=population[distance_matrix[index][select_index][1]]
-            # child1,child2=Crossover(parent1,parent2,2,2)
+            child1,child2=Crossover(parent1,parent2,2,2)
             # child1,child2=EdgeRecombination(parent1,parent2)
-            child1,child2=EdgeRecombination2D(parent1,parent2)
+            # child1,child2=EdgeRecombination2D(parent1,parent2)
             child1=mutation1(child1,mutation_rate,sigma)
             child2=mutation1(child2,mutation_rate,sigma)
             child1=mutation2(child1,mutation_rate,sigma)
@@ -457,11 +457,11 @@ def main():
         best_individual=population[fitness_board.index(best_fitness)]
         best_individual=localSearch(best_individual)
         population[fitness_board.index(best_fitness)]=best_individual
-        if Generation % 7 ==0:
-            population.sort(key=lambda x:calculateFitness(x))
-            num_replace = int(0.5 * population_size)
-            new_individuals = initialization()[:num_replace]
-            population[-num_replace:] = new_individuals
+        # if Generation % 5 ==0:
+        #     population.sort(key=lambda x:calculateFitness(x))
+        #     num_replace = int(0.5 * population_size)
+        #     new_individuals = initialization()[:num_replace]
+        #     population[-num_replace:] = new_individuals
     best_solution=population[fitness_board.index(best_fitness)]
     write_file(best_solution)
 if __name__ == '__main__':
