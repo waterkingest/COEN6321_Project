@@ -5,7 +5,7 @@ import numpy as np
 import copy
 Rowsize=8#8
 Colsize=8#8
-population_size=400
+population_size=100
 input_puzzle=[]
 children_Percent=0.45
 maxGeneration=300
@@ -13,7 +13,7 @@ initial_mutation_rate=0.9
 final_mutation_rate=0.005
 initial_sigma=Rowsize*Colsize*0.35
 final_sigma=1.0
-with open(os.path.join(os.path.dirname(os.path.abspath(__file__)),'Example_Input&Output\Ass1Input.txt'), 'r') as f:
+with open(r'Example_Input&Output\Ass1Input.txt', 'r') as f:
     for line in f:
         input_puzzle.append(line.strip().split(' '))
 Code_dictionary={}
@@ -90,20 +90,6 @@ def calculateMissmatch(puzzle):
         fitness+=calculatColMisMatch2(col1,col2)
     # fitness=-fitness
     return fitness
-# def mutation1(puzzle,mutation_rate):
-#     '''
-#     swap two pieces
-#     '''
-#     probability = random.randint(1, 100)
-#     if probability <= 5:
-#         pass
-#     else:
-#         swap_numb=random.randint(1,Rowsize*Colsize-10)
-#         for _ in range(swap_numb):
-#             index1,index2=random.sample(range(Rowsize*Colsize),2)
-#             puzzle[index1],puzzle[index2]=puzzle[index2],puzzle[index1]
-#     # puzzle=localSearch(puzzle)
-#     return puzzle
 def self_adaptive_Pm(current_value,min_value,max_value,improvement_rate,threshold_high=0.01,threshold_low=0.001,decay_factor=0.9,growth_factor=1.1):#self-daptive probability of mutation
     if improvement_rate>threshold_high:
         new_value=max(current_value*decay_factor, min_value)
@@ -117,44 +103,19 @@ def mutation1(puzzle, mutation_rate, sigma):
     '''
     Swap
     '''
-def mutation1(puzzle, mutation_rate, sigma):
-    '''
-    Swap
-    '''
     if random.random()<mutation_rate:
-        swap_numb=int(abs(np.random.normal(0,sigma)))
-        swap_numb=max(1,swap_numb)
+        swap_numb=random.randint(1, int(sigma))
         for _ in range(swap_numb):
             index1,index2=random.sample(range(Rowsize*Colsize), 2)
             puzzle[index1], puzzle[index2]=puzzle[index2], puzzle[index1]
     return puzzle
-
-# def mutation2(puzzle):
-#     '''
-#     rotate a piece
-#     '''
-#     probability = random.randint(1, 100)
-#     if probability <= 5:
-#         pass
-#     else:
-#         mutation2_numb=random.randint(1,Rowsize*Colsize)
-#         for _ in range(mutation2_numb):
-#             rotate_times=random.randint(1,3)
-
-#             index=random.randint(0,Rowsize*Colsize-1)
-#             # print(index,rotate_times)
-#             puzzle[index][2]=(puzzle[index][2]+rotate_times)%4
-#             puzzle[index][1]=puzzle[index][1][-rotate_times:]+puzzle[index][1][:-rotate_times]
-#     puzzle=localSearch(puzzle)
-#     return puzzle
 def mutation2(puzzle, mutation_rate, sigma):
     '''
     Rotate pieces with adaptive mutation rate and strength
     '''
 
     if random.random()<mutation_rate:
-        rotation_numb=int(abs(np.random.normal(0, sigma)))
-        rotation_numb=max(1, rotation_numb)
+        rotation_numb=random.randint(1, int(sigma))
         for _ in range(rotation_numb):
             rotate_times=random.randint(1, 3)
             index=random.randint(0, Rowsize * Colsize - 1)
@@ -407,7 +368,7 @@ def write_file(best_solution):
 def localSearch(puzzle):
     best_fitness = calculateFitness(puzzle)
     best_puzzle = puzzle.copy()
-    for _ in range(666):  # 迭代次数
+    for _ in range(100):  # 迭代次数
         # 生成邻域解
         mutation_rate=0.9
         sigma=1.0
