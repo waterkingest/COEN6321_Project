@@ -267,6 +267,8 @@ def mutation2(puzzle, mutation_rate, sigma):
 #     puzzle=localSearch(puzzle)
 #     return puzzle
 
+
+
 def reshape(matrix,row,col):
     total_elements = row*col
     if total_elements != len(matrix):
