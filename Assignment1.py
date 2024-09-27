@@ -5,13 +5,13 @@ import numpy as np
 import copy
 Rowsize=8#8
 Colsize=8#8
-population_size=200
+population_size=300
 input_puzzle=[]
-children_Percent=0.45
-maxGeneration=300
+children_Percent=0.4
+maxGeneration=500
 initial_mutation_rate=0.95
 final_mutation_rate=0.001
-initial_sigma=Rowsize*Colsize*0.25
+initial_sigma=Rowsize*Colsize*0.4
 final_sigma=1.0
 with open(r'Example_Input&Output\Ass1Input.txt', 'r') as f:
     for line in f:
@@ -34,19 +34,23 @@ def initialization():
     return population
 
 
-def calculatRowMisMatch(puzzleRow1,puzzleRow2):
+def calculatRowMisMatch(puzzleRow1,puzzleRow2,r1,r2):
     numberOfMisMatch=0
     for n,piece in enumerate(puzzleRow1):
         if piece[2]!=puzzleRow2[n][0]:
             if n==0 or n==Rowsize-1: #边缘的权值更大
                 numberOfMisMatch+=2
+            if r1==0 or r2==Rowsize-1: #边缘的权值更大
+                numberOfMisMatch+=2
             numberOfMisMatch+=1
     return numberOfMisMatch
-def calculatColMisMatch(puzzleCol1,puzzleCol2):
+def calculatColMisMatch(puzzleCol1,puzzleCol2,c1,c2):
     numberOfMisMatch=0
     for n,piece in enumerate(puzzleCol1):
         if piece[1]!=puzzleCol2[n][3]:
             if n==0 or n==Colsize-1: #边缘的权值更大
+                numberOfMisMatch+=2
+            if c1==0 or c2==Colsize-1: #边缘的权值更大
                 numberOfMisMatch+=2
             numberOfMisMatch+=1
     return numberOfMisMatch
@@ -67,13 +71,13 @@ def  calculateFitness(puzzle):
     puzzle=np.array(puzzle).reshape(Rowsize, Colsize).tolist()
     fitness=0
     for n in range(Rowsize-1):
-        fitness+=calculatRowMisMatch(puzzle[n],puzzle[n+1])
+        fitness+=calculatRowMisMatch(puzzle[n],puzzle[n+1],n,n+1)
     for n in range(Colsize-1):
         col1,col2=[],[]
         for i in range(Rowsize):
             col1.append(puzzle[i][n])
             col2.append(puzzle[i][n+1])
-        fitness+=calculatColMisMatch(col1,col2)
+        fitness+=calculatColMisMatch(col1,col2,n,n+1)
     # fitness=-fitness
     return fitness
 def calculateMissmatch(puzzle):
@@ -129,8 +133,8 @@ def mutation1(puzzle, mutation_rate, sigma):
     尺寸有1x1,1x2,2x1,2x2.
     '''
     if random.random()<mutation_rate:
-        swap_numb=random.randint(1,int(sigma))
-        # swap_numb=int(sigma)    #这个我不确定自适应要1到sigma取整的随机数还是从sigma自适应下降
+        # swap_numb=random.randint(1,int(sigma))
+        swap_numb=int(sigma)    #这个我不确定自适应要1到sigma取整的随机数还是从sigma自适应下降
         puzzle_2d=reshape(puzzle, Rowsize, Colsize)
         used_positions=set()
         for _ in range(swap_numb):
@@ -230,7 +234,8 @@ def mutation2(puzzle, mutation_rate, sigma):
     if random.random()<mutation_rate:
         puzzle_2d=reshape(puzzle, Rowsize, Colsize)
         used_positions=set()
-        num_blocks=random.randint(1,int(sigma))
+        # num_blocks=random.randint(1,int(sigma))
+        num_blocks=int(sigma)
         for _ in range(num_blocks):
             block_size=random.randint(1, 3)
             rows_block=cols_block=block_size
@@ -504,7 +509,25 @@ def write_file(best_solution):
         f.write(f"yuhangchen,Jiaxiyang\n")
         for row in best_solution:
             f.write(' '.join(row) + '\n')
-
+def format_solution(best_solution):
+    best_solution=reshape(best_solution,Rowsize,Colsize)
+    best_solution=[[x[1] for x in row] for row in best_solution]
+    for row in best_solution:
+        print('|-----|'*len(row))
+        up_number_list=[x[0] for x in row]
+        left_right_list=[x[1:4:2][::-1] for x in row]
+        down_number_list=[x[2] for x in row]
+        for up_num in up_number_list:
+            print(f"|  {up_num}  |",end='')
+        print('')
+        for left_right_num in left_right_list:
+            print(f"|{left_right_num[0]}   {left_right_num[1]}|",end='')
+        print('')
+        for down_num in down_number_list:
+            print(f"|  {down_num}  |",end='')
+        print('')
+    print('|-----|'*len(row))
+    return best_solution
 
 def localSearch(puzzle):
     best_fitness = calculateFitness(puzzle)
@@ -521,7 +544,6 @@ def localSearch(puzzle):
             best_puzzle = copy.deepcopy(neighbor)
     # print('output mutation1',calculateFitness(best_puzzle))
     return best_puzzle
-
 def localSearch2(puzzle):
     best_fitness = calculateFitness(puzzle)
     # print('input mutaition2:',best_fitness)
@@ -575,17 +597,14 @@ def main():
     Generation=0
     fitness_list=[]
     while fitness_board[fitness_board.index(min(fitness_board))]>0 and Generation<maxGeneration:
-        if previous_best_fitness != 0:    #self-adaptive mutayion
-            improvement_rate = (previous_best_fitness - best_fitness) / previous_best_fitness
-        else:
-            improvement_rate = 0
         distance_matrix=build_distance_matrix(population)
-        mutation_rate = self_adaptive_Pm(mutation_rate,final_mutation_rate,initial_mutation_rate,improvement_rate)#self-adaptive mutayion
-        sigma = self_adaptive_Pm(sigma,final_sigma,initial_sigma,improvement_rate)
         # random_parent=random.sample(range(0, population_size), int(population_size*children_Percent))
         # windows=[[i,population[i]] for i in random_parent]
         # windows.sort(key=lambda x:calculateFitness(x[1]))
         
+        '''
+         Diversity
+        '''
         for index,parent_select in enumerate(population):
             new_population=[]
             parent1=copy.deepcopy(parent_select)
@@ -593,12 +612,14 @@ def main():
             select_index=random.randint(0,population_size-2)
             parent2=copy.deepcopy(population[distance_matrix[index][select_index][1]])
             random_select=random.randint(0,100)
-            if random_select<20:
+            if random_select<33:
                 child1,child2=Crossover(parent1,parent2,3,3)
-            elif random_select<50:
+            elif random_select<66:
                 child1,child2=EdgeRecombination(parent1,parent2)
-            else:
+            elif random_select<90:
                 child1,child2=EdgeRecombination2D(parent1,parent2)
+            else:
+                child1,child2=parent1,parent2
             child1=mutation1(child1,mutation_rate,sigma)
             child2=mutation1(child2,mutation_rate,sigma)
             child1=mutation2(child1,mutation_rate,sigma)
@@ -608,17 +629,50 @@ def main():
             new_population.sort(key=lambda x:calculateFitness(x))
             if calculateFitness(new_population[0])<calculateFitness(parent_select):
                 population[index]=new_population[0]
+        '''
+        Tournament Selection
+        '''
+        random_parent=random.sample(range(0, population_size), int(population_size*children_Percent))
+        windows=[[i,population[i]] for i in random_parent]
+        windows.sort(key=lambda x:calculateFitness(x[1]))
+        new_population=[]
+        for parent_select in range(len(windows)//2):
+            parent1=windows[parent_select*2][1]
+            parent2=windows[parent_select*2+1][1]
+            # child1,child2=Crossover(parent1,parent2,2,2)
+            # child1,child2=EdgeRecombination(parent1,parent2)
+            child1,child2=EdgeRecombination2D(parent1,parent2)
+            child1=mutation1(child1,mutation_rate,sigma)
+            child2=mutation1(child2,mutation_rate,sigma)
+            child1=mutation2(child1,mutation_rate,sigma)
+            child2=mutation2(child2,mutation_rate,sigma)
+            new_population.append(child1)
+            new_population.append(child2)
+        new_population+=[x[1] for x in windows]
+        new_population.sort(key=lambda x:calculateFitness(x))
+        for index,old_population in enumerate(windows):
+            windows[index][1]=new_population[index]
+        for new_offspring in windows:
+            population[new_offspring[0]]=new_offspring[1]
         # for offspring in new_population:
         #     for index,old_population in enumerate(windows):
         #         if calculateFitness(offspring)<calculateFitness(old_population[1]):
         #             windows[index][1]=offspring
         #             break
+        #-----------------------------------------------------------------------------------------------------------------
         fitness_board=list(map(calculateFitness,population))
         best_fitness=min(fitness_board)
         best_individual=population[fitness_board.index(best_fitness)]
+        mismatch_Board=list(map(calculateMissmatch,population))
         best_individual=localSearch(best_individual)
-        best_individual=localSearch2(best_individual)
+        # best_individual=localSearch2(best_individual)
         population[fitness_board.index(best_fitness)]=best_individual
+        random_local_search=random.sample(range(0, population_size), 30)
+        for R_index in random_local_search:
+            R_individual=population[R_index]
+            R_individual=localSearch(R_individual)
+            # R_individual=localSearch2(R_individual)
+            population[R_index]=R_individual
         # print(f'bestindividual:{calculateFitness(best_individual)}')
         fitness_board=list(map(calculateFitness,population))
         best_fitness=min(fitness_board)
@@ -627,11 +681,20 @@ def main():
         best_fitness=min(fitness_board)
         fitness_list.append(best_fitness)
         mismatch_Board=list(map(calculateMissmatch,population))
+        if previous_best_fitness != 0:    #self-adaptive mutayion
+            improvement_rate = (previous_best_fitness - best_fitness) / previous_best_fitness
+        else:
+            improvement_rate = 0
+        mutation_rate = self_adaptive_Pm(mutation_rate,final_mutation_rate,initial_mutation_rate,improvement_rate)#self-adaptive mutayion
+        sigma = self_adaptive_Pm(sigma,final_sigma,initial_sigma,improvement_rate)
+        previous_best_fitness=best_fitness
         Generation+=1
         print(f'Generation {Generation}: Best Fitness = {best_fitness} :Best Mismatch = {mismatch_Board[fitness_board.index(best_fitness)]}')
-        if Generation % 3 ==0:
+        if Generation % 10 ==0:
+            # print('mutation_rate',mutation_rate)
+            # print('sigma',sigma)
             if best_fitness==fitness_list[-3]:
-                num_replace = int(0.95 * population_size)
+                num_replace = int(0.97 * population_size)
             else:
                 num_replace = int(0.5 * population_size)
             population.sort(key=lambda x:calculateFitness(x))
@@ -639,6 +702,7 @@ def main():
             new_individuals = initialization()[:num_replace]
             population[-num_replace:] = new_individuals
     best_solution=population[fitness_board.index(best_fitness)]
+    format_solution(best_solution)
     write_file(best_solution)
 if __name__ == '__main__':
     main()
