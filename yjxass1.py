@@ -5,13 +5,13 @@ import numpy as np
 import copy
 Rowsize=8#8
 Colsize=8#8
-population_size=200
+population_size=500
 input_puzzle=[]
-children_Percent=0.45
+children_Percent=0.25
 maxGeneration=100
 initial_mutation_rate=0.95
-final_mutation_rate=0.001
-initial_sigma=Rowsize*Colsize*0.2
+final_mutation_rate=0.002
+initial_sigma=Rowsize*Colsize*0.25
 final_sigma=1.0
 with open(r'Example_Input&Output\Ass1Input.txt', 'r') as f:
     for line in f:
@@ -129,12 +129,12 @@ def mutation1(puzzle, mutation_rate, sigma):
     尺寸有1x1,1x2,2x1,2x2.
     '''
     if random.random()<mutation_rate:
-        swap_numb=random.randint(1,int(sigma))
-        # swap_numb=int(sigma)    #这个我不确定自适应要1到sigma取整的随机数还是从sigma自适应下降
+        # swap_numb=random.randint(1,int(sigma))
+        swap_numb=int(sigma)    #这个我不确定自适应要1到sigma取整的随机数还是从sigma自适应下降
         puzzle_2d=reshape(puzzle, Rowsize, Colsize)
         used_positions=set()
         for _ in range(swap_numb):
-            block_sizes=[(1,1), (1,2), (2,1), (2,2)]
+            block_sizes=[(1,1), (1,2),(1,3), (2,1), (2,2),(3,1)]
             block_size=random.choice(block_sizes)
             rows_block, cols_block = block_size
             # 尝试找块数防止重叠
@@ -169,95 +169,51 @@ def mutation1(puzzle, mutation_rate, sigma):
                 pass
         puzzle=flatten(puzzle_2d)
     return puzzle
-def mutation2(puzzle, mutation_rate, sigma):
-    '''
-    按块旋转,块为1x1大小时,旋转拼图块本身；
-    块为2x2及以上大尺寸时，仅旋转块中拼图块的位置，不改变其内部序列。
-    '''
-    if random.random() < mutation_rate:
-        puzzle_2d=reshape(puzzle, Rowsize, Colsize)
-        #记录已使用的位置
-        used_positions=set()
-        num_blocks=random.randint(1, int(sigma))
-        # num_blocks=int(sigma)    #这个我不确定自适应要1到sigma取整的随机数还是从sigma自适应下降
-        for _ in range(num_blocks):
-            block_size=random.randint(1,3)
-            rows_block=cols_block = block_size
-            success=False
-            for attempt in range(66):  # 尝试次数（保证块不能出界）
-                row=random.randint(0,Rowsize-rows_block)
-                col=random.randint(0,Colsize-cols_block)
-                # 获取块的坐标
-                positions=[(row+r,col+c) for r in range(rows_block) for c in range(cols_block)]
-                # 检查位置是否被使用
-                if any(pos in used_positions for pos in positions):
-                    continue  # 如重叠就重选
-                rotate_times=random.randint(1, 3)
-                block=[puzzle_2d[row+r][col+c] for r in range(rows_block) for c in range(cols_block)]
-                block_2d=[block[i*cols_block:(i+1)*cols_block] for i in range(rows_block)]
-                for _ in range(rotate_times):
-                    block_2d=[list(x) for x in zip(*block_2d[::-1])]
-                if block_size==1:#如果是1x1就对内容进行旋转
-                    rotated_block=[item for sublist in block_2d for item in sublist]
-                    piece=rotated_block[0]
-                    rotate_times_piece=rotate_times%4
-                    piece[2]=(piece[2]+rotate_times_piece)%4
-                    piece[1]=piece[1][-rotate_times_piece:]+piece[1][:-rotate_times_piece]
-                    puzzle_2d[row][col]=piece
-                else:
-                    # 块尺寸大于1x1只旋转拼图块，不改变其内部上右下左所对应的值
-                    rotated_block=[item for sublist in block_2d for item in sublist]
-                    idx=0  #遍历旋转后的块
-                    for r in range(rows_block):
-                        for c in range(cols_block):
-                            piece=rotated_block[idx]
-                            puzzle_2d[row+r][col+c] = piece
-                            idx += 1
-                # 标记已占用位置，之后的重叠
-                used_positions.update(positions)
-                success=True
-                break
-            if not success:
-                pass
-        puzzle=flatten(puzzle_2d)
-    puzzle=localSearch(puzzle)
-    return puzzle
-
 # def mutation2(puzzle, mutation_rate, sigma):
 #     '''
-#     按块旋转版本2 ，tile里的顺序也会随着外面旋转而旋转
+#     按块旋转,块为1x1大小时,旋转拼图块本身；
+#     块为2x2及以上大尺寸时，仅旋转块中拼图块的位置，不改变其内部序列。
 #     '''
-#     if random.random()<mutation_rate:
+#     if random.random() < mutation_rate:
 #         puzzle_2d=reshape(puzzle, Rowsize, Colsize)
+#         #记录已使用的位置
 #         used_positions=set()
-#         num_blocks=random.randint(1,int(sigma))
+#         # num_blocks=random.randint(1, int(sigma))
+#         num_blocks=int(sigma)    #这个我不确定自适应要1到sigma取整的随机数还是从sigma自适应下降
 #         for _ in range(num_blocks):
-#             block_size=random.randint(1, 3)
-#             rows_block=cols_block=block_size
-#             #找不重叠的
-#             success = False
-#             for attempt in range(66):
+#             block_size=random.randint(1,3)
+#             rows_block=cols_block = block_size
+#             success=False
+#             for attempt in range(66):  # 尝试次数（保证块不能出界）
 #                 row=random.randint(0,Rowsize-rows_block)
 #                 col=random.randint(0,Colsize-cols_block)
+#                 # 获取块的坐标
 #                 positions=[(row+r,col+c) for r in range(rows_block) for c in range(cols_block)]
+#                 # 检查位置是否被使用
 #                 if any(pos in used_positions for pos in positions):
-#                     continue
-#                 rotate_times = random.randint(1,3)
+#                     continue  # 如重叠就重选
+#                 rotate_times=random.randint(1, 3)
 #                 block=[puzzle_2d[row+r][col+c] for r in range(rows_block) for c in range(cols_block)]
 #                 block_2d=[block[i*cols_block:(i+1)*cols_block] for i in range(rows_block)]
 #                 for _ in range(rotate_times):
 #                     block_2d=[list(x) for x in zip(*block_2d[::-1])]
-#                 rotated_block=[item for sublist in block_2d for item in sublist]
-#                 idx=0
-#                 for r in range(rows_block):
-#                     for c in range(cols_block):
-#                         piece=rotated_block[idx]
-#                         rotate_times_piece=rotate_times%4
-#                         piece[2]=(piece[2]+rotate_times_piece)%4
-#                         piece[1]=piece[1][-rotate_times_piece:]+piece[1][:-rotate_times_piece]
-#                         puzzle_2d[row+r][col+c] = piece
-#                         idx +=1
-#                 #标记被用的区域
+#                 if block_size==1:#如果是1x1就对内容进行旋转
+#                     rotated_block=[item for sublist in block_2d for item in sublist]
+#                     piece=rotated_block[0]
+#                     rotate_times_piece=rotate_times%4
+#                     piece[2]=(piece[2]+rotate_times_piece)%4
+#                     piece[1]=piece[1][-rotate_times_piece:]+piece[1][:-rotate_times_piece]
+#                     puzzle_2d[row][col]=piece
+#                 else:
+#                     # 块尺寸大于1x1只旋转拼图块，不改变其内部上右下左所对应的值
+#                     rotated_block=[item for sublist in block_2d for item in sublist]
+#                     idx=0  #遍历旋转后的块
+#                     for r in range(rows_block):
+#                         for c in range(cols_block):
+#                             piece=rotated_block[idx]
+#                             puzzle_2d[row+r][col+c] = piece
+#                             idx += 1
+#                 # 标记已占用位置，之后的重叠
 #                 used_positions.update(positions)
 #                 success=True
 #                 break
@@ -266,6 +222,51 @@ def mutation2(puzzle, mutation_rate, sigma):
 #         puzzle=flatten(puzzle_2d)
 #     puzzle=localSearch(puzzle)
 #     return puzzle
+
+def mutation2(puzzle, mutation_rate, sigma):
+    '''
+    按块旋转版本2 ，tile里的顺序也会随着外面旋转而旋转
+    '''
+    if random.random()<mutation_rate:
+        puzzle_2d=reshape(puzzle, Rowsize, Colsize)
+        used_positions=set()
+        # num_blocks=random.randint(1,int(sigma))
+        num_blocks=int(sigma)    #这个我不确定自适应要1到sigma取整的随机数还是从sigma自适应下降
+        for _ in range(num_blocks):
+            block_size=random.randint(1, 3)
+            rows_block=cols_block=block_size
+            #找不重叠的
+            success = False
+            for attempt in range(66):
+                row=random.randint(0,Rowsize-rows_block)
+                col=random.randint(0,Colsize-cols_block)
+                positions=[(row+r,col+c) for r in range(rows_block) for c in range(cols_block)]
+                if any(pos in used_positions for pos in positions):
+                    continue
+                rotate_times = random.randint(1,3)
+                block=[puzzle_2d[row+r][col+c] for r in range(rows_block) for c in range(cols_block)]
+                block_2d=[block[i*cols_block:(i+1)*cols_block] for i in range(rows_block)]
+                for _ in range(rotate_times):
+                    block_2d=[list(x) for x in zip(*block_2d[::-1])]
+                rotated_block=[item for sublist in block_2d for item in sublist]
+                idx=0
+                for r in range(rows_block):
+                    for c in range(cols_block):
+                        piece=rotated_block[idx]
+                        rotate_times_piece=rotate_times%4
+                        piece[2]=(piece[2]+rotate_times_piece)%4
+                        piece[1]=piece[1][-rotate_times_piece:]+piece[1][:-rotate_times_piece]
+                        puzzle_2d[row+r][col+c] = piece
+                        idx +=1
+                #标记被用的区域
+                used_positions.update(positions)
+                success=True
+                break
+            if not success:
+                pass
+        puzzle=flatten(puzzle_2d)
+    puzzle=localSearch(puzzle)
+    return puzzle
 
 
 
@@ -594,7 +595,7 @@ def main():
         best_individual=population[fitness_board.index(best_fitness)]
         best_individual=localSearch(best_individual)
         population[fitness_board.index(best_fitness)]=best_individual
-        if Generation % 6 ==0:
+        if Generation % 8 ==0:
             population.sort(key=lambda x:calculateFitness(x))
             num_replace = int(0.4 * population_size)
             new_individuals = initialization()[:num_replace]
