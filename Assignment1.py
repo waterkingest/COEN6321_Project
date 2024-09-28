@@ -695,7 +695,7 @@ def main():
         # best_individual=localSearch2(best_individual)
         best_individual=localSearch3(best_individual)
         population[fitness_board.index(best_fitness)]=best_individual
-        random_local_search=random.sample(range(0, population_size), 30)
+        random_local_search=random.sample(range(0, population_size), population_size)
         for R_index in random_local_search:
             R_individual=population[R_index]
             # R_individual=localSearch(R_individual)
