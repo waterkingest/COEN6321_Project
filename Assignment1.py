@@ -1,11 +1,12 @@
 # hyper parameter
 import random
 import os
+import math
 import numpy as np
 import copy
 Rowsize=8#8
 Colsize=8#8
-population_size=300
+population_size=200
 input_puzzle=[]
 children_Percent=0.4
 maxGeneration=500
@@ -548,7 +549,7 @@ def localSearch2(puzzle):
     best_fitness = calculateFitness(puzzle)
     # print('input mutaition2:',best_fitness)
     best_puzzle =copy.deepcopy(puzzle)
-    for zz in range(100):  # 迭代次数
+    for zz in range(500):  # 迭代次数
         # 生成邻域解
         mutation_rate=0.9
         sigma=1.0
@@ -560,6 +561,32 @@ def localSearch2(puzzle):
     #         print('mutation2',calculateFitness(best_puzzle))
     # print('output mutation2',calculateFitness(best_puzzle))
     return best_puzzle
+def localSearch3(puzzle):#模拟退火法
+    temperature=1000.0
+    final_temperature=0.1
+    cooling_rate=0.95
+    current_solution=copy.deepcopy(puzzle)
+    current_fitness=calculateFitness(current_solution)
+    while temperature>final_temperature:
+        new_solution=copy.deepcopy(current_solution)
+        operation=random.choice(['mutation1','mutation2'])
+        if operation=='mutation1':
+            new_solution=mutation1(new_solution,mutation_rate=1.0,sigma=1)
+        else:
+            new_solution=mutation2(new_solution,mutation_rate=1.0,sigma=1)
+        new_fitness=calculateFitness(new_solution)
+        if new_fitness<current_fitness:
+            current_solution=copy.deepcopy(new_solution)
+            current_fitness=new_fitness
+        # else:
+        #     probability=math.exp((current_fitness-new_fitness)/temperature)
+        #     if random.random()<probability:
+        #         current_solution=copy.deepcopy(new_solution)
+        #         current_fitness=new_fitness
+        temperature*=cooling_rate
+    return current_solution
+
+
 
 def build_distance_matrix(population):
     dis_value=np.zeros((population_size, population_size)).tolist()
@@ -664,14 +691,16 @@ def main():
         best_fitness=min(fitness_board)
         best_individual=population[fitness_board.index(best_fitness)]
         mismatch_Board=list(map(calculateMissmatch,population))
-        best_individual=localSearch(best_individual)
+        # best_individual=localSearch(best_individual)
         # best_individual=localSearch2(best_individual)
+        best_individual=localSearch3(best_individual)
         population[fitness_board.index(best_fitness)]=best_individual
         random_local_search=random.sample(range(0, population_size), 30)
         for R_index in random_local_search:
             R_individual=population[R_index]
-            R_individual=localSearch(R_individual)
+            # R_individual=localSearch(R_individual)
             # R_individual=localSearch2(R_individual)
+            R_individual=localSearch3(R_individual)
             population[R_index]=R_individual
         # print(f'bestindividual:{calculateFitness(best_individual)}')
         fitness_board=list(map(calculateFitness,population))
