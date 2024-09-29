@@ -9,7 +9,7 @@ Colsize=8#8
 population_size=300
 input_puzzle=[]
 children_Percent=0.4
-maxGeneration=500
+maxGeneration=100
 initial_mutation_rate=0.95
 final_mutation_rate=0.001
 initial_sigma=Rowsize*Colsize*0.4
@@ -538,7 +538,7 @@ def localSearch(puzzle):
         # 生成邻域解
         mutation_rate=0.9
         sigma=1.0
-        neighbor = mutation1(best_puzzle.copy(),mutation_rate, sigma)
+        neighbor = mutation1(copy.deepcopy(best_puzzle),mutation_rate, sigma)
         fitness = calculateFitness(neighbor)
         if fitness < best_fitness:
             best_fitness = fitness
@@ -549,12 +549,12 @@ def localSearch2(puzzle):
     best_fitness = calculateFitness(puzzle)
     # print('input mutaition2:',best_fitness)
     best_puzzle =copy.deepcopy(puzzle)
-    for _ in range(500):  # 迭代次数
+    for _ in range(200):  # 迭代次数
         # 生成邻域解
         mutation_rate=0.9
         sigma=1.0
-        neighbor = mutation2(puzzle.copy(),mutation_rate, sigma)
-        fitness = calculateFitness(neighbor.copy())
+        neighbor = mutation2(copy.deepcopy(best_puzzle),mutation_rate, sigma)
+        fitness = calculateFitness(neighbor)
         if fitness < best_fitness:
             best_fitness = fitness
             best_puzzle = copy.deepcopy(neighbor)
@@ -632,30 +632,30 @@ def main():
         '''
          Diversity
         '''
-        for index,parent_select in enumerate(population):
-            new_population=[]
-            parent1=copy.deepcopy(parent_select)
-            distance_matrix[index].sort(key=lambda x:x[0])
-            select_index=random.randint(0,population_size-2)
-            parent2=copy.deepcopy(population[distance_matrix[index][select_index][1]])
-            random_select=random.randint(0,100)
-            if random_select<10:
-                child1,child2=Crossover(parent1,parent2,3,3)
-            elif random_select<40:
-                child1,child2=EdgeRecombination(parent1,parent2)
-            elif random_select<90:
-                child1,child2=EdgeRecombination2D(parent1,parent2)
-            else:
-                child1,child2=parent1,parent2
-            child1=mutation1(child1,mutation_rate,sigma)
-            child2=mutation1(child2,mutation_rate,sigma)
-            child1=mutation2(child1,mutation_rate,sigma)
-            child2=mutation2(child2,mutation_rate,sigma)
-            new_population.append(child1)
-            new_population.append(child2)
-            new_population.sort(key=lambda x:calculateFitness(x))
-            if calculateFitness(new_population[0])<calculateFitness(parent_select):
-                population[index]=new_population[0]
+        # for index,parent_select in enumerate(population):
+        #     new_population=[]
+        #     parent1=copy.deepcopy(parent_select)
+        #     distance_matrix[index].sort(key=lambda x:x[0])
+        #     select_index=random.randint(0,population_size-2)
+        #     parent2=copy.deepcopy(population[distance_matrix[index][select_index][1]])
+        #     random_select=random.randint(0,100)
+        #     if random_select<10:
+        #         child1,child2=Crossover(parent1,parent2,3,3)
+        #     elif random_select<40:
+        #         child1,child2=EdgeRecombination(parent1,parent2)
+        #     elif random_select<90:
+        #         child1,child2=EdgeRecombination2D(parent1,parent2)
+        #     else:
+        #         child1,child2=parent1,parent2
+        #     child1=mutation1(child1,mutation_rate,sigma)
+        #     child2=mutation1(child2,mutation_rate,sigma)
+        #     child1=mutation2(child1,mutation_rate,sigma)
+        #     child2=mutation2(child2,mutation_rate,sigma)
+        #     new_population.append(child1)
+        #     new_population.append(child2)
+        #     new_population.sort(key=lambda x:calculateFitness(x))
+        #     if calculateFitness(new_population[0])<calculateFitness(parent_select):
+        #         population[index]=new_population[0]
         '''
         Tournament Selection
         '''
@@ -692,14 +692,14 @@ def main():
         best_individual=population[fitness_board.index(best_fitness)]
         mismatch_Board=list(map(calculateMissmatch,population))
         best_individual=localSearch(best_individual)
-        # best_individual=localSearch2(best_individual)
+        best_individual=localSearch2(best_individual)
         # best_individual=localSearch3(best_individual)
         population[fitness_board.index(best_fitness)]=best_individual
         random_local_search=random.sample(range(0, population_size), population_size//2)
         for R_index in random_local_search:
             R_individual=population[R_index]
             R_individual=localSearch(R_individual)
-            # R_individual=localSearch2(R_individual)
+            R_individual=localSearch2(R_individual)
             # R_individual=localSearch3(R_individual)
             population[R_index]=R_individual
         # print(f'bestindividual:{calculateFitness(best_individual)}')
