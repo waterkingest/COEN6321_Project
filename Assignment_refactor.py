@@ -515,7 +515,7 @@ def cal_distance(puzzle1,puzzle2):
     return distance
 
 #VLNS
-def select_non_adjacent_positions(Rowsize, Colsize, k):
+def select_non_adjacent_positions(k):
     positions = []
     attempts = 0
     max_attempts = 1000
@@ -542,7 +542,7 @@ def rotate_piece(piece, r):
     return [id, new_edges, new_angle]
 
 # 计算某个拼图块放置时的匹配边数
-def compute_matching_edges(puzzle, idx, Rowsize, Colsize):
+def compute_matching_edges(puzzle, idx):
     total_mismatch = 0
     row = idx // Colsize
     col = idx % Colsize
@@ -592,9 +592,9 @@ def compute_matching_edges(puzzle, idx, Rowsize, Colsize):
     return total_mismatch
 
 # VLNS算法核心
-def VLNS(puzzle, Rowsize, Colsize, k):
+def VLNS(puzzle, k):
     # 步骤1：选择不相邻的位置集合 S
-    positions = select_non_adjacent_positions(Rowsize, Colsize, k)
+    positions = select_non_adjacent_positions(k)
     positions_indices = [row * Colsize + col for (row, col) in positions]
 
     # 从拼图中移除这些拼图块
@@ -618,7 +618,7 @@ def VLNS(puzzle, Rowsize, Colsize, k):
                 idx = hole_pos[0] * Colsize + hole_pos[1]
                 temp_puzzle_copy = temp_puzzle.copy()
                 temp_puzzle_copy[idx] = rotated_piece
-                w = compute_matching_edges(temp_puzzle_copy, idx, Rowsize, Colsize)
+                w = compute_matching_edges(temp_puzzle_copy, idx)
                 if w < min_w:
                     min_w = w
                     best_r = r
@@ -640,8 +640,8 @@ def VLNS(puzzle, Rowsize, Colsize, k):
     return temp_puzzle
 
 # VLNS局部搜索
-def localSearch_VLNS(puzzle, Rowsize, Colsize, k):
-    best_puzzle = VLNS(puzzle, Rowsize, Colsize, k)
+def localSearch_VLNS(puzzle, k):
+    best_puzzle = VLNS(puzzle, k)
     best_fitness = calculateFitness(best_puzzle)
     original_fitness = calculateFitness(puzzle)
     if best_fitness < original_fitness:
@@ -672,8 +672,8 @@ def extra_population(population_X):
         child1=mutation2(child1,1,sigma)
         child2=mutation2(child2,1,sigma)
         k=21
-        child1 = localSearch_VLNS(child1, Rowsize, Colsize, k)
-        child2 = localSearch_VLNS(child2, Rowsize, Colsize, k)
+        child1 = localSearch_VLNS(child1, k)
+        child2 = localSearch_VLNS(child2, k)
         new_population.append(child1)
         new_population.append(child2)
     new_population+=population_X
@@ -722,8 +722,8 @@ def main():
             child1=mutation2(child1,mutation_rate,sigma)
             child2=mutation2(child2,mutation_rate,sigma)
             k=21
-            child1 = localSearch_VLNS(child1, Rowsize, Colsize, k)
-            child2 = localSearch_VLNS(child2, Rowsize, Colsize, k)
+            child1 = localSearch_VLNS(child1, k)
+            child2 = localSearch_VLNS(child2, k)
             new_population.append(child1)
             new_population.append(child2)
             new_population.append(parent1)
@@ -737,13 +737,13 @@ def main():
         best_individual=population[fitness_board.index(best_fitness)]
         mismatch_Board=list(map(calculateMissmatch,population))
         k=21
-        best_individual=localSearch_VLNS(best_individual, Rowsize, Colsize, k)
+        best_individual=localSearch_VLNS(best_individual, k)
         population[fitness_board.index(best_fitness)]=best_individual
         random_local_search=random.sample(range(0, population_size), population_size//2)
         for R_index in random_local_search:
             R_individual=population[R_index]
             k = 21
-            R_individual = localSearch_VLNS(R_individual, Rowsize, Colsize, k)
+            R_individual = localSearch_VLNS(R_individual, k)
             population[R_index]=R_individual
         fitness_board=list(map(calculateFitness,population))
         best_fitness=min(fitness_board)
