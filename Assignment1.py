@@ -4,14 +4,15 @@ import os
 import math
 import numpy as np
 import copy
+from scipy.optimize import linear_sum_assignment
 Rowsize=8#8
 Colsize=8#8
 population_size=300
 input_puzzle=[]
 children_Percent=0.4
-maxGeneration=100
+maxGeneration=200
 initial_mutation_rate=0.95
-final_mutation_rate=0.001
+final_mutation_rate=0.0001
 initial_sigma=Rowsize*Colsize*0.4
 final_sigma=1.0
 with open(r'Example_Input&Output\Ass1Input.txt', 'r') as f:
@@ -29,8 +30,10 @@ def decode_dictionary(piece):
 def initialization():
     population=[]
     for i in range(population_size):
-        Code_puzzle = random.sample(range(1, Rowsize*Colsize+1), Rowsize*Colsize)
-        puzzle = [[x,decode_dictionary(str(x)),0]for x in Code_puzzle]
+        Code_puzzle=random.sample(range(1, Rowsize*Colsize+1), Rowsize*Colsize)
+        puzzle=[[x,decode_dictionary(str(x)),0]for x in Code_puzzle]
+        puzzle=localSearch(puzzle)
+        puzzle=localSearch2(puzzle)
         population.append(puzzle)
     return population
 
@@ -141,10 +144,11 @@ def mutation1(puzzle, mutation_rate, sigma):
         for _ in range(swap_numb):
             block_sizes=[(1,1), (1,2), (2,1), (2,2)]
             block_size=random.choice(block_sizes)
+            # block_size=(1,1)
             rows_block, cols_block = block_size
             # 尝试找块数防止重叠
             success = False
-            for attempt in range(66):  #尝试子次数
+            for attempt in range(100):  #尝试子次数
                 #第一个块
                 row1=random.randint(0,Rowsize-rows_block)
                 col1=random.randint(0,Colsize-cols_block)
@@ -238,11 +242,12 @@ def mutation2(puzzle, mutation_rate, sigma):
         # num_blocks=random.randint(1,int(sigma))
         num_blocks=int(sigma)
         for _ in range(num_blocks):
+            # block_size=1
             block_size=random.randint(1, 3)
             rows_block=cols_block=block_size
             #找不重叠的
             success = False
-            for attempt in range(66):
+            for attempt in range(100):
                 row=random.randint(0,Rowsize-rows_block)
                 col=random.randint(0,Colsize-cols_block)
                 positions=[(row+r,col+c) for r in range(rows_block) for c in range(cols_block)]
@@ -288,6 +293,7 @@ def Crossover(puzzle1,puzzle2,windowrow,windowcol):
     '''
     Order crossover
     '''
+
     parent1=reshape(puzzle1,Rowsize,Colsize)
     parent2=reshape(puzzle2,Rowsize,Colsize)
     rand_row_index=random.randint(0,Rowsize-windowrow)
@@ -529,15 +535,56 @@ def format_solution(best_solution):
         print('')
     print('|-----|'*len(row))
     return best_solution
-
+def localSearch01(puzzle):
+    best_fitness = calculateFitness(puzzle)
+    # print('input mutaition2:',best_fitness)
+    best_puzzle =copy.deepcopy(puzzle)
+    no_improve=0
+    max_no_improve=100
+    while no_improve<max_no_improve:  #迭代次数
+        # 生成邻域解
+        mutation_rate=0.9
+        sigma=1.0
+        neighbor = mutation1(copy.deepcopy(best_puzzle),mutation_rate, sigma)
+        fitness = calculateFitness(neighbor)
+        if fitness < best_fitness:
+            best_fitness = fitness
+            best_puzzle = copy.deepcopy(neighbor)
+            no_improve=0
+        else:
+            no_improve+=1
+    #         print('mutation2',calculateFitness(best_puzzle))
+    # print('output mutation2',calculateFitness(best_puzzle))
+    return best_puzzle
+def localSearch02(puzzle):
+    best_fitness = calculateFitness(puzzle)
+    # print('input mutaition2:',best_fitness)
+    best_puzzle =copy.deepcopy(puzzle)
+    no_improve=0
+    max_no_improve=100
+    while no_improve<max_no_improve:  #迭代次数
+        # 生成邻域解
+        mutation_rate=0.91
+        sigma=1.0
+        neighbor = mutation2(copy.deepcopy(best_puzzle),mutation_rate, sigma)
+        fitness = calculateFitness(neighbor)
+        if fitness < best_fitness:
+            best_fitness = fitness
+            best_puzzle = copy.deepcopy(neighbor)
+            no_improve=0
+        else:
+            no_improve+=1
+    #         print('mutation2',calculateFitness(best_puzzle))
+    # print('output mutation2',calculateFitness(best_puzzle))
+    return best_puzzle
 def localSearch(puzzle):
     best_fitness = calculateFitness(puzzle)
     # print('input mutaition1:',best_fitness)
     best_puzzle = copy.deepcopy(puzzle)
-    for _ in range(289):  # 迭代次数
+    for _ in range(289):  # 迭代次数289 0.9 1.0
         # 生成邻域解
         mutation_rate=0.9
-        sigma=1.0
+        sigma=1
         neighbor = mutation1(copy.deepcopy(best_puzzle),mutation_rate, sigma)
         fitness = calculateFitness(neighbor)
         if fitness < best_fitness:
@@ -549,7 +596,7 @@ def localSearch2(puzzle):
     best_fitness = calculateFitness(puzzle)
     # print('input mutaition2:',best_fitness)
     best_puzzle =copy.deepcopy(puzzle)
-    for _ in range(200):  # 迭代次数
+    for _ in range(50):  # 迭代次数200 0.91 1.0
         # 生成邻域解
         mutation_rate=0.9
         sigma=1.0
@@ -613,9 +660,145 @@ def cal_distance(puzzle1,puzzle2):
             distance=angle
     return distance
 
+#VLNS
+def select_non_adjacent_positions(Rowsize, Colsize, k):
+    positions = []
+    attempts = 0
+    max_attempts = 1000
+    while len(positions) < k and attempts < max_attempts:
+        row = random.randint(0, Rowsize - 1)
+        col = random.randint(0, Colsize - 1)
+        pos = (row, col)
+        # 检查是否与已选位置相邻
+        adjacent = False
+        for p in positions:
+            if abs(p[0] - row) + abs(p[1] - col) == 1:
+                adjacent = True
+                break
+        if not adjacent and pos not in positions:
+            positions.append(pos)
+        attempts += 1
+    return positions
+
+# 旋转拼图块
+def rotate_piece(piece, r):
+    id, edges, angle = piece
+    new_angle = (angle + r) % 4
+    new_edges = edges[-r:] + edges[:-r]
+    return [id, new_edges, new_angle]
+
+# 计算某个拼图块放置时的匹配边数
+def compute_matching_edges(puzzle, idx, Rowsize, Colsize):
+    total_mismatch = 0
+    row = idx // Colsize
+    col = idx % Colsize
+    piece = puzzle[idx]
+    piece_edges = piece[1]
+    # 检查每个方向的邻居
+    # 上邻居
+    if row > 0:
+        neighbor_idx = (row - 1) * Colsize + col
+        neighbor_piece = puzzle[neighbor_idx]
+        if neighbor_piece:
+            neighbor_edge = neighbor_piece[1][2]
+            if piece_edges[0] != neighbor_edge:
+                total_mismatch += 1
+    else:
+        total_mismatch += 2  # 边缘权重
+    # 右邻居
+    if col < Colsize - 1:
+        neighbor_idx = row * Colsize + (col + 1)
+        neighbor_piece = puzzle[neighbor_idx]
+        if neighbor_piece:
+            neighbor_edge = neighbor_piece[1][3]
+            if piece_edges[1] != neighbor_edge:
+                total_mismatch += 1
+    else:
+        total_mismatch += 2
+    # 下邻居
+    if row < Rowsize - 1:
+        neighbor_idx = (row + 1) * Colsize + col
+        neighbor_piece = puzzle[neighbor_idx]
+        if neighbor_piece:
+            neighbor_edge = neighbor_piece[1][0]
+            if piece_edges[2] != neighbor_edge:
+                total_mismatch += 1
+    else:
+        total_mismatch += 2
+    # 左邻居
+    if col > 0:
+        neighbor_idx = row * Colsize + (col - 1)
+        neighbor_piece = puzzle[neighbor_idx]
+        if neighbor_piece:
+            neighbor_edge = neighbor_piece[1][1]
+            if piece_edges[3] != neighbor_edge:
+                total_mismatch += 1
+    else:
+        total_mismatch += 2
+    return total_mismatch
+
+# VLNS算法核心
+def VLNS(puzzle, Rowsize, Colsize, k):
+    # 步骤1：选择不相邻的位置集合 S
+    positions = select_non_adjacent_positions(Rowsize, Colsize, k)
+    positions_indices = [row * Colsize + col for (row, col) in positions]
+
+    # 从拼图中移除这些拼图块
+    removed_pieces = [puzzle[idx] for idx in positions_indices]
+    # 标记空位
+    temp_puzzle = puzzle.copy()
+    for idx in positions_indices:
+        temp_puzzle[idx] = None  # 标记为空
+
+    n = len(removed_pieces)
+    w_matrix = np.zeros((n, n))
+    r_matrix = np.zeros((n, n), dtype=int)
+
+    # 构建权重矩阵和旋转矩阵
+    for i, piece in enumerate(removed_pieces):
+        for j, hole_pos in enumerate(positions):
+            min_w = float('inf')
+            best_r = 0
+            for r in range(4):
+                rotated_piece = rotate_piece(piece, r)
+                idx = hole_pos[0] * Colsize + hole_pos[1]
+                temp_puzzle_copy = temp_puzzle.copy()
+                temp_puzzle_copy[idx] = rotated_piece
+                w = compute_matching_edges(temp_puzzle_copy, idx, Rowsize, Colsize)
+                if w < min_w:
+                    min_w = w
+                    best_r = r
+            w_matrix[i][j] = min_w  # 最小化不匹配边缘数
+            r_matrix[i][j] = best_r
+
+    # 使用匈牙利算法求解指派问题
+    row_ind, col_ind = linear_sum_assignment(w_matrix)
+
+    # 根据匹配结果重新放置拼图块
+    for i, j in zip(row_ind, col_ind):
+        piece = removed_pieces[i]
+        r = r_matrix[i][j]
+        rotated_piece = rotate_piece(piece, r)
+        hole_pos = positions[j]
+        idx = hole_pos[0] * Colsize + hole_pos[1]
+        temp_puzzle[idx] = rotated_piece
+
+    return temp_puzzle
+
+# VLNS局部搜索
+def localSearch_VLNS(puzzle, Rowsize, Colsize, k):
+    best_puzzle = VLNS(puzzle, Rowsize, Colsize, k)
+    best_fitness = calculateFitness(best_puzzle)
+    original_fitness = calculateFitness(puzzle)
+    if best_fitness < original_fitness:
+        return best_puzzle
+    else:
+        return puzzle
+
 
 def main():
     population=initialization()
+    print("Initializing population...")
     fitness_board=list(map(calculateFitness,population))
     best_fitness=min(fitness_board)
     previous_best_fitness=best_fitness
@@ -623,6 +806,7 @@ def main():
     sigma=initial_sigma
     Generation=0
     fitness_list=[]
+    no_improvement_count=0
     while fitness_board[fitness_board.index(min(fitness_board))]>0 and Generation<maxGeneration:
         distance_matrix=build_distance_matrix(population)
         # random_parent=random.sample(range(0, population_size), int(population_size*children_Percent))
@@ -666,13 +850,18 @@ def main():
         for parent_select in range(len(windows)//2):
             parent1=windows[parent_select*2][1]
             parent2=windows[parent_select*2+1][1]
-            # child1,child2=Crossover(parent1,parent2,2,2)
+            xover_row=random.randint(1,Rowsize-1)
+            xover_col=random.randint(1,Colsize-1)
+            # child1,child2=Crossover(parent1,parent2,xover_row,xover_col)
             # child1,child2=EdgeRecombination(parent1,parent2)
             child1,child2=EdgeRecombination2D(parent1,parent2)
             child1=mutation1(child1,mutation_rate,sigma)
             child2=mutation1(child2,mutation_rate,sigma)
             child1=mutation2(child1,mutation_rate,sigma)
             child2=mutation2(child2,mutation_rate,sigma)
+            k=16
+            child1 = localSearch_VLNS(child1, Rowsize, Colsize, k)
+            child2 = localSearch_VLNS(child2, Rowsize, Colsize, k)
             new_population.append(child1)
             new_population.append(child2)
         new_population+=[x[1] for x in windows]
@@ -691,6 +880,7 @@ def main():
         best_fitness=min(fitness_board)
         best_individual=population[fitness_board.index(best_fitness)]
         mismatch_Board=list(map(calculateMissmatch,population))
+
         best_individual=localSearch(best_individual)
         best_individual=localSearch2(best_individual)
         # best_individual=localSearch3(best_individual)
@@ -700,8 +890,12 @@ def main():
             R_individual=population[R_index]
             R_individual=localSearch(R_individual)
             R_individual=localSearch2(R_individual)
-            # R_individual=localSearch3(R_individual)
+            k = 16
+            R_individual = localSearch_VLNS(R_individual, Rowsize, Colsize, k)
+            # R_individual=localSearch01(R_individual)
+            # R_individual=localSearch02(R_individual)
             population[R_index]=R_individual
+
         # print(f'bestindividual:{calculateFitness(best_individual)}')
         fitness_board=list(map(calculateFitness,population))
         best_fitness=min(fitness_board)
@@ -709,6 +903,20 @@ def main():
         fitness_board=list(map(calculateFitness,population))
         best_fitness=min(fitness_board)
         fitness_list.append(best_fitness)
+
+        if best_fitness >= previous_best_fitness:
+            no_improvement_count += 1
+        else:
+            no_improvement_count = 0  # 有改进，重置计数
+            previous_best_fitness = best_fitness
+
+        if no_improvement_count >= 5:
+            print("No improvement in 5 generations, reinitializing part of the population...")
+            num_replace = int(0.5 * population_size)
+            new_individuals = initialization()[:num_replace]
+            population[-num_replace:] = new_individuals
+            no_improvement_count = 0  # 重置计数器
+
         mismatch_Board=list(map(calculateMissmatch,population))
         if previous_best_fitness != 0:    #self-adaptive mutayion
             improvement_rate = (previous_best_fitness - best_fitness) / previous_best_fitness
