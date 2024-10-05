@@ -374,7 +374,10 @@ def update_edge_table(edge_table,element):
         if element in edge_table[key]:
             edge_table[key]=[x for x in edge_table[key] if x != element]
     return edge_table
-def find_min_or_random(lst): # 找最短的或随机选
+def find_min_or_random(lst):
+    '''
+    Find the shortest or random select from the Edge table
+    '''
     min_value = min(lst)
     min_values = [x for x in lst if x == min_value]
     if len(min_values) == 1:
@@ -382,14 +385,12 @@ def find_min_or_random(lst): # 找最短的或随机选
     else:
         return random.choice(min_values)
 def select_perfect_element(edge_table,element):
-    # print('last select',element)
-    
+
     edges_list=edge_table[str(element)]
-    edge_table={key: value for key, value in edge_table.items() if key!=str(element)} #删除用完的key
+    edge_table={key: value for key, value in edge_table.items() if key!=str(element)} # Remove the selected element from the edge table
     if not edges_list:
         
         element=random.choice(list(edge_table.items()))[0]
-        # print('random select',element)
         perfect_element=int(element)
         edge_table=update_edge_table(edge_table,perfect_element)
         return perfect_element,edge_table
@@ -408,6 +409,9 @@ def select_perfect_element(edge_table,element):
     return perfect_element,edge_table
 
 def EdgeRecombination(puzzle1,puzzle2):
+    '''
+    Do edge recombination in one dimension
+    '''
     puzzle1_code=encode_dictionary(puzzle1)
     puzzle2_code=encode_dictionary(puzzle2)
     edge_table,puzzle1_list,puzzle2_list=buildEdgeTable(puzzle1,puzzle2)
@@ -432,6 +436,9 @@ def EdgeRecombination(puzzle1,puzzle2):
     return child1,child2
 
 def EdgeRecombination2D(puzzle1,puzzle2):
+    '''
+    Do edge recombination in two dimension
+    '''
     puzzle1_code=encode_dictionary(puzzle1)
     puzzle2_code=encode_dictionary(puzzle2)
     edge2d_table,puzzle1_list,puzzle2_list=build2DEdgeTable(puzzle1,puzzle2)
@@ -463,6 +470,9 @@ def EdgeRecombination2D(puzzle1,puzzle2):
     child2=[[x,puzzle2_code[str(x)][0],puzzle2_code[str(x)][1]]for x in c2]
     return child1,child2
 def write_file(best_solution,best_mismatch):
+    '''
+    write the best solution to the file
+    '''
     best_solution=reshape(best_solution,Rowsize,Colsize)
     best_solution=[[x[1] for x in row] for row in best_solution]
     file_name = "{}_{}.txt".format(output_file_name,best_mismatch)
@@ -523,7 +533,7 @@ def select_non_adjacent_positions(k):
         row = random.randint(0, Rowsize - 1)
         col = random.randint(0, Colsize - 1)
         pos = (row, col)
-        # 检查是否与已选位置相邻
+        # Check for proximity to the selected position
         adjacent = False
         for p in positions:
             if abs(p[0] - row) + abs(p[1] - col) == 1:
@@ -534,22 +544,28 @@ def select_non_adjacent_positions(k):
         attempts += 1
     return positions
 
-# 旋转拼图块
+
 def rotate_piece(piece, r):
+    '''
+    Rotate a piece by r degrees (0, 90, 180, or 270)
+    '''
     id, edges, angle = piece
     new_angle = (angle + r) % 4
     new_edges = edges[-r:] + edges[:-r]
     return [id, new_edges, new_angle]
 
-# 计算某个拼图块放置时的匹配边数
 def compute_matching_edges(puzzle, idx):
+    '''
+    Calculate the number of mismatching sides for a given puzzle piece placement
+    '''
+    global OutOrIN
     total_mismatch = 0
     row = idx // Colsize
     col = idx % Colsize
     piece = puzzle[idx]
     piece_edges = piece[1]
-    # 检查每个方向的邻居
-    # 上邻居
+    # Check the neighbors in each direction
+    # Up neighbor
     if row > 0:
         neighbor_idx = (row - 1) * Colsize + col
         neighbor_piece = puzzle[neighbor_idx]
@@ -558,8 +574,8 @@ def compute_matching_edges(puzzle, idx):
             if piece_edges[0] != neighbor_edge:
                 total_mismatch += 1
     else:
-        total_mismatch += 2  # 边缘权重
-    # 右邻居
+        total_mismatch += OutOrIN  # Edge Penalty
+    # right neighbor
     if col < Colsize - 1:
         neighbor_idx = row * Colsize + (col + 1)
         neighbor_piece = puzzle[neighbor_idx]
@@ -568,8 +584,8 @@ def compute_matching_edges(puzzle, idx):
             if piece_edges[1] != neighbor_edge:
                 total_mismatch += 1
     else:
-        total_mismatch += 2
-    # 下邻居
+        total_mismatch += OutOrIN # Edge Penalty
+    # down neighbor
     if row < Rowsize - 1:
         neighbor_idx = (row + 1) * Colsize + col
         neighbor_piece = puzzle[neighbor_idx]
@@ -578,8 +594,8 @@ def compute_matching_edges(puzzle, idx):
             if piece_edges[2] != neighbor_edge:
                 total_mismatch += 1
     else:
-        total_mismatch += 2
-    # 左邻居
+        total_mismatch += OutOrIN # Edge Penalty
+    # left neighbor
     if col > 0:
         neighbor_idx = row * Colsize + (col - 1)
         neighbor_piece = puzzle[neighbor_idx]
@@ -588,18 +604,21 @@ def compute_matching_edges(puzzle, idx):
             if piece_edges[3] != neighbor_edge:
                 total_mismatch += 1
     else:
-        total_mismatch += 2
+        total_mismatch += OutOrIN # Edge Penalty
     return total_mismatch
 
-# VLNS算法核心
 def VLNS(puzzle, k):
-    # 步骤1：选择不相邻的位置集合 S
+    '''
+    Vary large neighborhood search algorithm
+    '''
+    # Step 1: Select k non-adjacent positions
     positions = select_non_adjacent_positions(k)
     positions_indices = [row * Colsize + col for (row, col) in positions]
 
-    # 从拼图中移除这些拼图块
+    # Step 2: Remove the pieces at the selected positions
     removed_pieces = [puzzle[idx] for idx in positions_indices]
-    # 标记空位
+    
+    # Step 3: Mark Remove Puzzle as Empty
     temp_puzzle = puzzle.copy()
     for idx in positions_indices:
         temp_puzzle[idx] = None  # 标记为空
@@ -608,7 +627,7 @@ def VLNS(puzzle, k):
     w_matrix = np.zeros((n, n))
     r_matrix = np.zeros((n, n), dtype=int)
 
-    # 构建权重矩阵和旋转矩阵
+    # Step 4: Compute the mismatching edges for each pair of removed pieces
     for i, piece in enumerate(removed_pieces):
         for j, hole_pos in enumerate(positions):
             min_w = float('inf')
@@ -622,26 +641,29 @@ def VLNS(puzzle, k):
                 if w < min_w:
                     min_w = w
                     best_r = r
-            w_matrix[i][j] = min_w  # 最小化不匹配边缘数
+            w_matrix[i][j] = min_w  # Record the lowest number of mismatches
             r_matrix[i][j] = best_r
 
-    # 使用匈牙利算法求解指派问题
+    # Using the Hungarian algorithm to find the best match
     row_ind, col_ind = linear_sum_assignment(w_matrix)
 
-    # 根据匹配结果重新放置拼图块
+    # Step 5: Place the pieces back into the puzzle
     for i, j in zip(row_ind, col_ind):
         piece = removed_pieces[i]
-        r = r_matrix[i][j]
-        rotated_piece = rotate_piece(piece, r)
+        rotate_times = r_matrix[i][j]
+        rotated_piece = rotate_piece(piece, rotate_times)
         hole_pos = positions[j]
         idx = hole_pos[0] * Colsize + hole_pos[1]
         temp_puzzle[idx] = rotated_piece
 
     return temp_puzzle
 
-# VLNS局部搜索
-def localSearch_VLNS(puzzle, k):
-    best_puzzle = VLNS(puzzle, k)
+
+def localSearch_VLNS(puzzle):
+    '''
+    Vary large neighborhood search
+    '''
+    best_puzzle = VLNS(puzzle, VLNS_Size)
     best_fitness = calculateFitness(best_puzzle)
     original_fitness = calculateFitness(puzzle)
     if best_fitness < original_fitness:
@@ -653,7 +675,7 @@ def extra_population(population_X):
     new_population=[]
     sigma=Rowsize*Colsize*0.5
     for _ in range(len(population_X)//2):
-        random_parent=random.sample(range(0, len(population_X)), 5)
+        random_parent=random.sample(range(0, len(population_X)), Window_Size)
         windows=[[i,population_X[i]] for i in random_parent]
         windows.sort(key=lambda x:calculateFitness(x[1]))
         parent1=windows[0][1]
@@ -671,9 +693,9 @@ def extra_population(population_X):
         child2=mutation1(child2,1,sigma)
         child1=mutation2(child1,1,sigma)
         child2=mutation2(child2,1,sigma)
-        k=21
-        child1 = localSearch_VLNS(child1, k)
-        child2 = localSearch_VLNS(child2, k)
+        
+        child1 = localSearch_VLNS(child1)
+        child2 = localSearch_VLNS(child2)
         new_population.append(child1)
         new_population.append(child2)
     new_population+=population_X
@@ -701,7 +723,7 @@ def main():
         '''
         new_population=[]
         for _ in range(int(population_size*children_Percent)//2):
-            random_parent=random.sample(range(0, population_size), 5)
+            random_parent=random.sample(range(0, population_size), Window_Size)
             windows=[[i,population[i]] for i in random_parent]
             windows.sort(key=lambda x:calculateFitness(x[1]))
             parent1=windows[0][1]
@@ -721,9 +743,8 @@ def main():
             child2=mutation1(child2,mutation_rate,sigma)
             child1=mutation2(child1,mutation_rate,sigma)
             child2=mutation2(child2,mutation_rate,sigma)
-            k=21
-            child1 = localSearch_VLNS(child1, k)
-            child2 = localSearch_VLNS(child2, k)
+            child1 = localSearch_VLNS(child1)
+            child2 = localSearch_VLNS(child2)
             new_population.append(child1)
             new_population.append(child2)
             new_population.append(parent1)
@@ -737,13 +758,13 @@ def main():
         best_individual=population[fitness_board.index(best_fitness)]
         mismatch_Board=list(map(calculateMissmatch,population))
         k=21
-        best_individual=localSearch_VLNS(best_individual, k)
+        best_individual=localSearch_VLNS(best_individual)
         population[fitness_board.index(best_fitness)]=best_individual
         random_local_search=random.sample(range(0, population_size), population_size//2)
         for R_index in random_local_search:
             R_individual=population[R_index]
             k = 21
-            R_individual = localSearch_VLNS(R_individual, k)
+            R_individual = localSearch_VLNS(R_individual)
             population[R_index]=R_individual
         fitness_board=list(map(calculateFitness,population))
         best_fitness=min(fitness_board)
@@ -787,6 +808,8 @@ if __name__ == '__main__':
     Rowsize=8
     Colsize=8
     children_Percent=0.4
+    VLNS_Size=21
+    Window_Size=5
     population_size=int(input("Enter the population size [100,1000]: "))
     maxGeneration=int(input('Enter the maxGeneration [1,100]: '))
     initial_mutation_rate=0.95
