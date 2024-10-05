@@ -1,3 +1,8 @@
 /Assignment1Cpp/.vs
 /Assignment1Cpp/Assignment1Cpp
 /Assignment1Cpp/x64
+/Assignment1Cpp/Assignment1Cpp/x64/Debug/Assignment1Cpp.tlog
+/Assignment1Cpp/Assignment1Cpp/x64/Debug/*.obj
+/Assignment1Cpp/Assignment1Cpp/x64/Debug/*.idb
+/Assignment1Cpp/Assignment1Cpp/x64/Debug/*.pdb
+/Assignment1Cpp/Assignment1Cpp/x64/Debug/*.ilk
