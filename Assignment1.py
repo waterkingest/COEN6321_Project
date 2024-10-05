@@ -32,8 +32,8 @@ def initialization():
     for i in range(population_size):
         Code_puzzle=random.sample(range(1, Rowsize*Colsize+1), Rowsize*Colsize)
         puzzle=[[x,decode_dictionary(str(x)),0]for x in Code_puzzle]
-        puzzle=localSearch(puzzle)
-        puzzle=localSearch2(puzzle)
+        # puzzle=localSearch(puzzle)
+        # puzzle=localSearch2(puzzle)
         population.append(puzzle)
     return population
 
@@ -859,7 +859,7 @@ def main():
             child2=mutation1(child2,mutation_rate,sigma)
             child1=mutation2(child1,mutation_rate,sigma)
             child2=mutation2(child2,mutation_rate,sigma)
-            k=16
+            k=21
             child1 = localSearch_VLNS(child1, Rowsize, Colsize, k)
             child2 = localSearch_VLNS(child2, Rowsize, Colsize, k)
             new_population.append(child1)
@@ -881,16 +881,17 @@ def main():
         best_individual=population[fitness_board.index(best_fitness)]
         mismatch_Board=list(map(calculateMissmatch,population))
 
-        best_individual=localSearch(best_individual)
-        best_individual=localSearch2(best_individual)
-        # best_individual=localSearch3(best_individual)
+        # best_individual=localSearch(best_individual)
+        # best_individual=localSearch2(best_individual)
+        k=21
+        best_individual=localSearch_VLNS(best_individual, Rowsize, Colsize, k)
         population[fitness_board.index(best_fitness)]=best_individual
         random_local_search=random.sample(range(0, population_size), population_size//2)
         for R_index in random_local_search:
             R_individual=population[R_index]
-            R_individual=localSearch(R_individual)
-            R_individual=localSearch2(R_individual)
-            k = 16
+            # R_individual=localSearch(R_individual)
+            # R_individual=localSearch2(R_individual)
+            k = 21
             R_individual = localSearch_VLNS(R_individual, Rowsize, Colsize, k)
             # R_individual=localSearch01(R_individual)
             # R_individual=localSearch02(R_individual)
