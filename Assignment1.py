@@ -39,24 +39,32 @@ def initialization():
 
 
 def calculatRowMisMatch(puzzleRow1,puzzleRow2,r1,r2):
+    global OutOrIN
     numberOfMisMatch=0
     for n,piece in enumerate(puzzleRow1):
         if piece[2]!=puzzleRow2[n][0]:
-            if n==0 or n==Rowsize-1: #边缘的权值更大
+            # if n==0 or n==Rowsize-1: #边缘的权值更小
+            #     numberOfMisMatch+=1
+            if r1==0 or r2==Rowsize-1: #边缘的权值更小
+                numberOfMisMatch+=OutOrIN
+            elif n==0 or n==Rowsize-1: #边缘的权值更小
+                numberOfMisMatch+=OutOrIN
+            else:
                 numberOfMisMatch+=2
-            if r1==0 or r2==Rowsize-1: #边缘的权值更大
-                numberOfMisMatch+=2
-            numberOfMisMatch+=1
     return numberOfMisMatch
 def calculatColMisMatch(puzzleCol1,puzzleCol2,c1,c2):
+    global OutOrIN
     numberOfMisMatch=0
     for n,piece in enumerate(puzzleCol1):
         if piece[1]!=puzzleCol2[n][3]:
-            if n==0 or n==Colsize-1: #边缘的权值更大
+            # if n==0 or n==Colsize-1: #边缘的权值更小
+            #     numberOfMisMatch+=1
+            if c1==0 or c2==Colsize-1: #边缘的权值更小
+                numberOfMisMatch+=OutOrIN
+            elif n==0 or n==Colsize-1: #边缘的权值更小
+                numberOfMisMatch+=OutOrIN
+            else:
                 numberOfMisMatch+=2
-            if c1==0 or c2==Colsize-1: #边缘的权值更大
-                numberOfMisMatch+=2
-            numberOfMisMatch+=1
     return numberOfMisMatch
 def calculatRowMisMatch2(puzzleRow1,puzzleRow2):
     numberOfMisMatch=0
@@ -508,10 +516,10 @@ def EdgeRecombination2D(puzzle1,puzzle2):
     child1=[[x,puzzle1_code[str(x)][0],puzzle1_code[str(x)][1]]for x in c1]
     child2=[[x,puzzle2_code[str(x)][0],puzzle2_code[str(x)][1]]for x in c2]
     return child1,child2
-def write_file(best_solution):
+def write_file(best_solution,best_mismatch):
     best_solution=reshape(best_solution,Rowsize,Colsize)
     best_solution=[[x[1] for x in row] for row in best_solution]
-    file_name = r"Output/Ass1Output_with_diversity_new_mutation.txt"
+    file_name = r"Output/Ass1Output_Add_VLNS_{}.txt".format(best_mismatch)
     with open(file_name, 'w') as f:
         f.write(f"yuhangchen,Jiaxiyang\n")
         for row in best_solution:
@@ -660,6 +668,35 @@ def cal_distance(puzzle1,puzzle2):
             distance=angle
     return distance
 
+def extra_population(population_X):
+    new_population=[]
+    sigma=Rowsize*Colsize*0.5
+    for _ in range(len(population_X)//2):
+        random_parent=random.sample(range(0, len(population_X)), 5)
+        windows=[[i,population_X[i]] for i in random_parent]
+        windows.sort(key=lambda x:calculateFitness(x[1]))
+        parent1=windows[0][1]
+        parent2=windows[1][1]
+        random_select=random.randint(0,100)
+        if random_select<10:
+            child1,child2=Crossover(parent1,parent2,3,3)
+        elif random_select<40:
+            child1,child2=EdgeRecombination(parent1,parent2)
+        elif random_select<90:
+            child1,child2=EdgeRecombination2D(parent1,parent2)
+        else:
+            child1,child2=parent1,parent2
+        # child1,child2=Crossover(parent1,parent2,2,2)
+        # child1,child2=EdgeRecombination(parent1,parent2)
+        # child1,child2=EdgeRecombination2D(parent1,parent2)
+        child1=mutation1(child1,1,sigma)
+        child2=mutation1(child2,1,sigma)
+        child1=mutation2(child1,1,sigma)
+        child2=mutation2(child2,1,sigma)
+        new_population.append(child1)
+        new_population.append(child2)
+    new_population+=population_X
+    return new_population[:len(population_X)]
 #VLNS
 def select_non_adjacent_positions(Rowsize, Colsize, k):
     positions = []
@@ -795,8 +832,40 @@ def localSearch_VLNS(puzzle, Rowsize, Colsize, k):
     else:
         return puzzle
 
+def extra_population(population_X):
+    new_population=[]
+    sigma=Rowsize*Colsize*0.5
+    for _ in range(len(population_X)//2):
+        random_parent=random.sample(range(0, len(population_X)), 5)
+        windows=[[i,population_X[i]] for i in random_parent]
+        windows.sort(key=lambda x:calculateFitness(x[1]))
+        parent1=windows[0][1]
+        parent2=windows[1][1]
+        random_select=random.randint(0,100)
+        if random_select<10:
+            child1,child2=Crossover(parent1,parent2,3,3)
+        elif random_select<40:
+            child1,child2=EdgeRecombination(parent1,parent2)
+        elif random_select<90:
+            child1,child2=EdgeRecombination2D(parent1,parent2)
+        else:
+            child1,child2=parent1,parent2
+        # child1,child2=Crossover(parent1,parent2,2,2)
+        # child1,child2=EdgeRecombination(parent1,parent2)
+        # child1,child2=EdgeRecombination2D(parent1,parent2)
+        child1=mutation1(child1,1,sigma)
+        child2=mutation1(child2,1,sigma)
+        child1=mutation2(child1,1,sigma)
+        child2=mutation2(child2,1,sigma)
+        new_population.append(child1)
+        new_population.append(child2)
+    new_population+=population_X
+    return new_population[:len(population_X)]
 
 def main():
+    global OutOrIN
+    OutOrIN=1
+    dict_fitness_value={"4":1,"1":4}# 权值变化
     population=initialization()
     print("Initializing population...")
     fitness_board=list(map(calculateFitness,population))
@@ -807,6 +876,8 @@ def main():
     Generation=0
     fitness_list=[]
     no_improvement_count=0
+    do_local_search3=0
+    real_best_fitness=999
     while fitness_board[fitness_board.index(min(fitness_board))]>0 and Generation<maxGeneration:
         distance_matrix=build_distance_matrix(population)
         # random_parent=random.sample(range(0, population_size), int(population_size*children_Percent))
@@ -896,27 +967,26 @@ def main():
             # R_individual=localSearch01(R_individual)
             # R_individual=localSearch02(R_individual)
             population[R_index]=R_individual
-
         # print(f'bestindividual:{calculateFitness(best_individual)}')
         fitness_board=list(map(calculateFitness,population))
         best_fitness=min(fitness_board)
         # print(f'Best Fitness = {best_fitness}')
-        fitness_board=list(map(calculateFitness,population))
+        fitness_board=list(map(calculateFitness,copy.deepcopy(population)))
         best_fitness=min(fitness_board)
         fitness_list.append(best_fitness)
 
-        if best_fitness >= previous_best_fitness:
-            no_improvement_count += 1
-        else:
-            no_improvement_count = 0  # 有改进，重置计数
-            previous_best_fitness = best_fitness
+        # if best_fitness >= previous_best_fitness:
+        #     no_improvement_count += 1
+        # else:
+        #     no_improvement_count = 0  # 有改进，重置计数
+        #     previous_best_fitness = best_fitness
 
-        if no_improvement_count >= 5:
-            print("No improvement in 5 generations, reinitializing part of the population...")
-            num_replace = int(0.5 * population_size)
-            new_individuals = initialization()[:num_replace]
-            population[-num_replace:] = new_individuals
-            no_improvement_count = 0  # 重置计数器
+        # if no_improvement_count >= 5:
+        #     print("No improvement in 5 generations, reinitializing part of the population...")
+        #     num_replace = int(0.5 * population_size)
+        #     new_individuals = initialization()[:num_replace]
+        #     population[-num_replace:] = new_individuals
+        #     no_improvement_count = 0  # 重置计数器
 
         mismatch_Board=list(map(calculateMissmatch,population))
         if previous_best_fitness != 0:    #self-adaptive mutayion
@@ -928,19 +998,29 @@ def main():
         previous_best_fitness=best_fitness
         Generation+=1
         print(f'Generation {Generation}: Best Fitness = {best_fitness} :Best Mismatch = {mismatch_Board[fitness_board.index(best_fitness)]}')
-        if Generation % 10 ==0:
+        if Generation % 5 ==0:
             # print('mutation_rate',mutation_rate)
             # print('sigma',sigma)
             if best_fitness==fitness_list[-3]:
+                OutOrIN=dict_fitness_value[str(OutOrIN)]
                 num_replace = int(0.97 * population_size)
             else:
                 num_replace = int(0.5 * population_size)
             population.sort(key=lambda x:calculateFitness(x))
             
-            new_individuals = initialization()[:num_replace]
-            population[-num_replace:] = new_individuals
-    best_solution=population[fitness_board.index(best_fitness)]
+            new_individuals = extra_population(copy.deepcopy(population[-num_replace:]))
+            population[-num_replace:] = copy.deepcopy(new_individuals)
+            # new_kjllation[-num_replace:] = copy.deepcopy(new_individuals)
+        best_solution=population[fitness_board.index(best_fitness)]
+        best_mismatch=calculateMissmatch(best_solution)
+        if best_fitness<real_best_fitness or best_mismatch<real_best_mismatch:
+            best_solution=population[fitness_board.index(best_fitness)]
+            best_mismatch=calculateMissmatch(best_solution)
+            real_best_fitness=best_fitness
+            real_best_mismatch=best_mismatch
+            write_file(best_solution,best_mismatch)
     format_solution(best_solution)
-    write_file(best_solution)
+    best_mismatch=calculateMissmatch(best_solution)
+    write_file(best_solution,best_mismatch)
 if __name__ == '__main__':
     main()
