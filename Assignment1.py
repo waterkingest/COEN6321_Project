@@ -7,10 +7,10 @@ import copy
 from scipy.optimize import linear_sum_assignment
 Rowsize=8#8
 Colsize=8#8
-population_size=300
+population_size=400
 input_puzzle=[]
 children_Percent=0.4
-maxGeneration=200
+maxGeneration=300
 initial_mutation_rate=0.95
 final_mutation_rate=0.0001
 initial_sigma=Rowsize*Colsize*0.4
@@ -32,8 +32,6 @@ def initialization():
     for i in range(population_size):
         Code_puzzle=random.sample(range(1, Rowsize*Colsize+1), Rowsize*Colsize)
         puzzle=[[x,decode_dictionary(str(x)),0]for x in Code_puzzle]
-        # puzzle=localSearch(puzzle)
-        # puzzle=localSearch2(puzzle)
         population.append(puzzle)
     return population
 
@@ -668,35 +666,6 @@ def cal_distance(puzzle1,puzzle2):
             distance=angle
     return distance
 
-def extra_population(population_X):
-    new_population=[]
-    sigma=Rowsize*Colsize*0.5
-    for _ in range(len(population_X)//2):
-        random_parent=random.sample(range(0, len(population_X)), 5)
-        windows=[[i,population_X[i]] for i in random_parent]
-        windows.sort(key=lambda x:calculateFitness(x[1]))
-        parent1=windows[0][1]
-        parent2=windows[1][1]
-        random_select=random.randint(0,100)
-        if random_select<10:
-            child1,child2=Crossover(parent1,parent2,3,3)
-        elif random_select<40:
-            child1,child2=EdgeRecombination(parent1,parent2)
-        elif random_select<90:
-            child1,child2=EdgeRecombination2D(parent1,parent2)
-        else:
-            child1,child2=parent1,parent2
-        # child1,child2=Crossover(parent1,parent2,2,2)
-        # child1,child2=EdgeRecombination(parent1,parent2)
-        # child1,child2=EdgeRecombination2D(parent1,parent2)
-        child1=mutation1(child1,1,sigma)
-        child2=mutation1(child2,1,sigma)
-        child1=mutation2(child1,1,sigma)
-        child2=mutation2(child2,1,sigma)
-        new_population.append(child1)
-        new_population.append(child2)
-    new_population+=population_X
-    return new_population[:len(population_X)]
 #VLNS
 def select_non_adjacent_positions(Rowsize, Colsize, k):
     positions = []
@@ -857,6 +826,9 @@ def extra_population(population_X):
         child2=mutation1(child2,1,sigma)
         child1=mutation2(child1,1,sigma)
         child2=mutation2(child2,1,sigma)
+        k=21
+        child1 = localSearch_VLNS(child1, Rowsize, Colsize, k)
+        child2 = localSearch_VLNS(child2, Rowsize, Colsize, k)
         new_population.append(child1)
         new_population.append(child2)
     new_population+=population_X
