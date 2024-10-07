@@ -329,12 +329,14 @@ def find_puzzle2_2dedge(puzzle_list,element):
     puzzle2_row=index2//Rowsize
     puzzle2_col=index2%Rowsize
     puzzle2_edge_result=[]
+    # find the up and down edge
     if puzzle2_col == Rowsize-1:
         puzzle2_edge_result.append([puzzle2_row,0])
         puzzle2_edge_result.append([puzzle2_row,puzzle2_col-1])
     else:
         puzzle2_edge_result.append([puzzle2_row,puzzle2_col+1])
         puzzle2_edge_result.append([puzzle2_row,puzzle2_col-1])
+    # find the left and right edge
     if puzzle2_row == Colsize-1:
         puzzle2_edge_result.append([0,puzzle2_col])
         puzzle2_edge_result.append([puzzle2_row-1,puzzle2_col])
@@ -355,12 +357,14 @@ def build2DEdgeTable(puzzle1,puzzle2):
         edge2d_table[str(puzzle1_list[i])]=[]
         puzzle1_row=i//Rowsize
         puzzle1_col=i%Rowsize
+        # find the up and down edge
         if puzzle1_col == Rowsize-1:
             edge2d_table[str(puzzle1_list[i])].append(puzzle1_2D[puzzle1_row][0][0])
             edge2d_table[str(puzzle1_list[i])].append(puzzle1_2D[puzzle1_row][puzzle1_col-1][0])
         else:
             edge2d_table[str(puzzle1_list[i])].append(puzzle1_2D[puzzle1_row][puzzle1_col+1][0])
             edge2d_table[str(puzzle1_list[i])].append(puzzle1_2D[puzzle1_row][puzzle1_col-1][0])
+        # find the left and right edge
         if puzzle1_row == Colsize-1:
             edge2d_table[str(puzzle1_list[i])].append(puzzle1_2D[0][puzzle1_col][0])
             edge2d_table[str(puzzle1_list[i])].append(puzzle1_2D[puzzle1_row-1][puzzle1_col][0])
