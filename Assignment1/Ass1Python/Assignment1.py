@@ -500,8 +500,11 @@ def write_file(best_solution,best_mismatch):
     # file_name = "{}_{}.txt".format(output_file_name,best_mismatch)
     with open(file_name, 'w') as f:
         f.write(f"Yuhang Chen 40253925, Jiaxi Yang 40261989\n")
-        for row in best_solution:
-            f.write(' '.join(row) + '\n')
+        for index,row in enumerate(best_solution):
+            if index== len(best_solution)-1:
+                f.write(' '.join(row))
+            else:
+                f.write(' '.join(row) + '\n')
 def format_solution(best_solution):
     '''
     format the best solution and print it
