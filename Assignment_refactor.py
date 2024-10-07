@@ -2,7 +2,7 @@ import random
 import numpy as np
 import copy
 from scipy.optimize import linear_sum_assignment
-
+import os
 def Creat_code_dictionary():
     '''
     Read raw puzzle file to creat Genotype dictionary
@@ -292,7 +292,7 @@ def encode_dictionary(puzzle):
 
 def find_puzzle2_edge(puzzle_list,element):
     '''
-    find the edge from the puzzle 2
+    find the edge from the puzzle 2 in 1d edge table
     '''
     index2=puzzle_list.index(element)
     if index2 == Rowsize*Colsize-1:
@@ -302,7 +302,7 @@ def find_puzzle2_edge(puzzle_list,element):
 
 def buildEdgeTable(puzzle1,puzzle2):
     '''
-    in one D
+    Build the edge table for 21 Dimension, each piece has 2 edges
     '''
     
     puzzle1_list=[x[0] for x in puzzle1]
@@ -322,6 +322,9 @@ def buildEdgeTable(puzzle1,puzzle2):
         edge_table[str(puzzle1_list[i])].append(puzzle2_list[puzzle2_edges_index2])
     return edge_table,puzzle1_list,puzzle2_list
 def find_puzzle2_2dedge(puzzle_list,element):
+    '''
+    find the edge from the puzzle 2 in 2d edge table
+    '''
     index2=puzzle_list.index(element)
     puzzle2_row=index2//Rowsize
     puzzle2_col=index2%Rowsize
@@ -341,7 +344,7 @@ def find_puzzle2_2dedge(puzzle_list,element):
     return puzzle2_edge_result
 def build2DEdgeTable(puzzle1,puzzle2):
     '''
-    in 2D
+    Build the edge table for 2 Dimension, each piece has 4 edges
     '''
     puzzle1_2D=reshape(puzzle1,Rowsize,Colsize)
     puzzle2_2D=reshape(puzzle2,Rowsize,Colsize)
@@ -370,6 +373,9 @@ def build2DEdgeTable(puzzle1,puzzle2):
             edge2d_table[str(puzzle1_list[i])].append(puzzle2_2D[x][y][0])
     return edge2d_table,puzzle1_list,puzzle2_list
 def update_edge_table(edge_table,element):
+    '''
+    Remove the selected element from the Edge table
+    '''
     for key in edge_table:
         if element in edge_table[key]:
             edge_table[key]=[x for x in edge_table[key] if x != element]
@@ -385,14 +391,16 @@ def find_min_or_random(lst):
     else:
         return random.choice(min_values)
 def select_perfect_element(edge_table,element):
-
+    '''
+    Select the perfect element from the edge table
+    '''
     edges_list=edge_table[str(element)]
     edge_table={key: value for key, value in edge_table.items() if key!=str(element)} # Remove the selected element from the edge table
-    if not edges_list:
+    if not edges_list: # If the edge list is empty, random select an element from the edge table
         
         element=random.choice(list(edge_table.items()))[0]
         perfect_element=int(element)
-        edge_table=update_edge_table(edge_table,perfect_element)
+        edge_table=update_edge_table(edge_table,perfect_element) # Remove the selected element from the edge table
         return perfect_element,edge_table
     edge_length_list=[len(edge_table[str(x)]) for x in edges_list]
     temp_list=[]
@@ -400,12 +408,12 @@ def select_perfect_element(edge_table,element):
         if edge not in temp_list:
             temp_list.append(edge)
         else:
-            perfect_element=edge
-            edge_table=update_edge_table(edge_table,perfect_element)
+            perfect_element=edge # find the common edge
+            edge_table=update_edge_table(edge_table,perfect_element) # Remove the selected element from the edge table
             return perfect_element,edge_table
-    select_index=edge_length_list.index(find_min_or_random(edge_length_list))
+    select_index=edge_length_list.index(find_min_or_random(edge_length_list)) # if cannot find the common edge, select the shortest edge or reandom select
     perfect_element=edges_list[select_index]
-    edge_table=update_edge_table(edge_table,perfect_element)
+    edge_table=update_edge_table(edge_table,perfect_element) # Remove the selected element from the edge table
     return perfect_element,edge_table
 
 def EdgeRecombination(puzzle1,puzzle2):
@@ -441,19 +449,24 @@ def EdgeRecombination2D(puzzle1,puzzle2):
     '''
     puzzle1_code=encode_dictionary(puzzle1)
     puzzle2_code=encode_dictionary(puzzle2)
+    # Step1: creat the edge table
     edge2d_table,puzzle1_list,puzzle2_list=build2DEdgeTable(puzzle1,puzzle2)
     
     random_num=random.randint(0,Rowsize*Colsize-1)
+    # Step2: random select the first element
     select_element1=puzzle1_list[random_num]
     select_element2=puzzle2_list[random_num]
 
     edge_table1=copy.deepcopy(edge2d_table)
     edge_table2=copy.deepcopy(edge2d_table)
+    # remove the selected element from the edge table
     edge_table1=update_edge_table(edge_table1,select_element1)
     edge_table2=update_edge_table(edge_table2,select_element2)
+    # initialize the child
     c1,c2=[[0 for _ in range(Colsize)] for _ in range(Rowsize)],[[0 for _ in range(Colsize)] for _ in range(Rowsize)]
     for i in range(Rowsize):
         for j in range(Colsize):
+            # follow the S sequence to select the element
             if i%2==0:
                 c1[i][j]=select_element1
                 c2[i][j]=select_element2
@@ -462,6 +475,7 @@ def EdgeRecombination2D(puzzle1,puzzle2):
                 c2[i][-j-1]=select_element2
             if i==Rowsize-1 and j==Colsize-1:
                 break
+            # Step3: select the next element
             select_element1,edge_table1=select_perfect_element(edge_table1,select_element1)
             select_element2,edge_table2=select_perfect_element(edge_table2,select_element2)
     c1=flatten(c1)
@@ -481,6 +495,9 @@ def write_file(best_solution,best_mismatch):
         for row in best_solution:
             f.write(' '.join(row) + '\n')
 def format_solution(best_solution):
+    '''
+    format the best solution and print it
+    '''
     print('Best Result: ')
     best_solution=reshape(best_solution,Rowsize,Colsize)
     best_solution=[[x[1] for x in row] for row in best_solution]
@@ -502,6 +519,9 @@ def format_solution(best_solution):
     return best_solution
 
 def build_distance_matrix(population):
+    '''
+    build the distance matrix to record the distance between each individual
+    '''
     dis_value=np.zeros((population_size, population_size)).tolist()
     for i in range(len(population)):
         for j in range(i,len(population)):
@@ -514,9 +534,11 @@ def build_distance_matrix(population):
             dis_value[i][j] = dis_value[j][i]
     return dis_value
 def cal_distance(puzzle1,puzzle2):
+    '''
+    calculate the distance between two puzzles
+    '''
     for idv_tile in range(Colsize*Rowsize):
-        #如3142 与1423 的dis为1，3142 2872如果不匹配权重最大8
-        angle=abs((puzzle1[idv_tile][2]-puzzle2[idv_tile][2])%3+(puzzle1[idv_tile][2]-puzzle2[idv_tile][2])//3)
+        angle=abs((puzzle1[idv_tile][2]-puzzle2[idv_tile][2])%3+(puzzle1[idv_tile][2]-puzzle2[idv_tile][2])//3) #calculate the angle difference
         id_diff=puzzle1[idv_tile][0]-puzzle2[idv_tile][0]
         if id_diff !=0:
             distance=8     #set the weight
@@ -672,6 +694,9 @@ def localSearch_VLNS(puzzle):
         return puzzle
 
 def extra_population(population_X):
+    '''
+    Renew the worst population
+    '''
     new_population=[]
     sigma=Rowsize*Colsize*0.5
     for _ in range(len(population_X)//2):
@@ -704,7 +729,7 @@ def extra_population(population_X):
 def main():
     global OutOrIN
     OutOrIN=1
-    dict_fitness_value={"4":1,"1":4}# 权值变化
+    dict_fitness_value={"4":1,"1":4}# Used to record the variable penalization of edge area
     print("Initializing population...")
     population=initialization()
     fitness_board=list(map(calculateFitness,population))
@@ -726,11 +751,11 @@ def main():
             random_parent=random.sample(range(0, population_size), Window_Size)
             windows=[[i,population[i]] for i in random_parent]
             windows.sort(key=lambda x:calculateFitness(x[1]))
-            parent1=windows[0][1]
+            parent1=windows[0][1]  # choose the best parent follow the tournament selection method
             parent2=windows[1][1]
             xover_row=random.randint(1,Rowsize-1)
             xover_col=random.randint(1,Colsize-1)
-            random_select=random.randint(0,100)
+            random_select=random.randint(0,100) # random select the crossover method
             if random_select<10:
                 child1,child2=Crossover(parent1,parent2,xover_row,xover_col)
             elif random_select<40:
@@ -738,7 +763,7 @@ def main():
             elif random_select<90:
                 child1,child2=EdgeRecombination2D(parent1,parent2)
             else:
-                child1,child2=parent1,parent2
+                child1,child2=parent1,parent2 # 10% chance of not crossover.
             child1=mutation1(child1,mutation_rate,sigma)
             child2=mutation1(child2,mutation_rate,sigma)
             child1=mutation2(child1,mutation_rate,sigma)
@@ -750,24 +775,22 @@ def main():
             new_population.append(parent1)
             new_population.append(parent2)
         new_population.sort(key=lambda x:calculateFitness(x))
-        for index,old_population in enumerate(windows):
+        for index,old_population in enumerate(windows): #Keep, better solution
             population[random_parent[index]]=copy.deepcopy(new_population[index])
         #-----------------------------------------------------------------------------------------------------------------
-        fitness_board=list(map(calculateFitness,population))
+        # Elitism
+        fitness_board=list(map(calculateFitness,copy.deepcopy(population)))
         best_fitness=min(fitness_board)
         best_individual=population[fitness_board.index(best_fitness)]
-        mismatch_Board=list(map(calculateMissmatch,population))
-        k=21
+        mismatch_Board=list(map(calculateMissmatch,copy.deepcopy(population)))
         best_individual=localSearch_VLNS(best_individual)
         population[fitness_board.index(best_fitness)]=best_individual
+        # Random select individuals to do local search
         random_local_search=random.sample(range(0, population_size), population_size//2)
         for R_index in random_local_search:
             R_individual=population[R_index]
-            k = 21
             R_individual = localSearch_VLNS(R_individual)
             population[R_index]=R_individual
-        fitness_board=list(map(calculateFitness,population))
-        best_fitness=min(fitness_board)
         fitness_board=list(map(calculateFitness,copy.deepcopy(population)))
         best_fitness=min(fitness_board)
         fitness_list.append(best_fitness)
@@ -787,16 +810,18 @@ def main():
         print(f'Generation {Generation}: -------------Best Mismatch = {best_mismatch}')
         if Generation % 5 ==0:
             if best_fitness==fitness_list[-3]:
+                # if fitness did not improve for 3 times, update the penalty value to stimulate population to generate transformations
                 OutOrIN=dict_fitness_value[str(OutOrIN)]
                 num_replace = int(0.97 * population_size)
             else:
+                # every 5 generations, update the worst 50% of population
                 num_replace = int(0.5 * population_size)
             population.sort(key=lambda x:calculateFitness(x))
             
-            new_individuals = extra_population(copy.deepcopy(population[-num_replace:]))
+            new_individuals = extra_population(copy.deepcopy(population[-num_replace:])) #update the worst population
             population[-num_replace:] = copy.deepcopy(new_individuals)
 
-        if best_fitness<real_best_fitness or best_mismatch<real_best_mismatch:
+        if best_fitness<real_best_fitness or best_mismatch<real_best_mismatch: # if generation fitness is better than the best fitness, update the best fitness, and write the file
             real_best_fitness=best_fitness
             real_best_mismatch=best_mismatch
             write_file(best_solution,best_mismatch)
@@ -818,6 +843,8 @@ if __name__ == '__main__':
     final_sigma=1.0
     input_file_path=r'Example_Input&Output\Ass1Input.txt'
     output_file_name=r'Output\Ass1Output_Refactor_Add_VLNS'
+    if not os.path.exists('Output'):
+        os.makedirs('Output')
     # hyper parameter
     Code_dictionary=Creat_code_dictionary()
     main()
