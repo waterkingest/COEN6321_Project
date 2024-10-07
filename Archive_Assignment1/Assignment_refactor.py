@@ -1,3 +1,4 @@
+# Yuhang Chen 40253925, Jiaxi Yang 40261989
 import random
 import numpy as np
 import copy
@@ -11,6 +12,8 @@ def Creat_code_dictionary():
     with open(input_file_path, 'r') as f:
         for line in f:
             input_puzzle.append(line.strip().split(' '))
+    if len(input_puzzle)==Rowsize+1:
+        input_puzzle=input_puzzle[1:]
     Code_dictionary={}
     code=1
     for i in range(1,Rowsize+1):
@@ -493,9 +496,10 @@ def write_file(best_solution,best_mismatch):
     '''
     best_solution=reshape(best_solution,Rowsize,Colsize)
     best_solution=[[x[1] for x in row] for row in best_solution]
-    file_name = "{}_{}.txt".format(output_file_name,best_mismatch)
+    file_name = "{}.txt".format(output_file_name)
+    # file_name = "{}_{}.txt".format(output_file_name,best_mismatch)
     with open(file_name, 'w') as f:
-        f.write(f"Yuhang Chen 40253925,Jiaxi Yang 40261989\n")
+        f.write(f"Yuhang Chen 40253925, Jiaxi Yang 40261989\n")
         for row in best_solution:
             f.write(' '.join(row) + '\n')
 def format_solution(best_solution):
@@ -727,6 +731,7 @@ def extra_population(population_X):
         child2 = localSearch_VLNS(child2)
         new_population.append(child1)
         new_population.append(child2)
+    # Prioritize retention of offspring regardless of results
     new_population+=population_X
     return new_population[:len(population_X)]
 
@@ -845,8 +850,8 @@ if __name__ == '__main__':
     final_mutation_rate=0.0001
     initial_sigma=Rowsize*Colsize*0.4
     final_sigma=1.0
-    input_file_path=r'Example_Input&Output\Ass1Input.txt'
-    output_file_name=r'Output\Ass1Output_Refactor_Add_VLNS'
+    input_file_path=r'Ass1Input.txt'
+    output_file_name=r'Output\Ass1Output'
     if not os.path.exists('Output'):
         os.makedirs('Output')
     # hyper parameter

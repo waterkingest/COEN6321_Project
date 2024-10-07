@@ -13,7 +13,7 @@ int CountColumnMismatches(vector<string> first, vector<string> second);
 int main()
 {
 	ifstream inputFile;
-	string inputFilePath = "F:/Canada/Concordia/COEN6321_machineLearning/Assignment#1/Assignment1CPP/Ass1Output.txt";
+	string inputFilePath = "F:\\Canada\\Concordia\\COEN6321_machineLearning\\Assignment#1\\Assignment1\\Ass1Output_Best_Result.txt";
 	inputFile.open(inputFilePath);
 
 	string currentText;
