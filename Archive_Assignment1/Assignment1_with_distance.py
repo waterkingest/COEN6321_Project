@@ -121,7 +121,7 @@ def mutation2(puzzle, mutation_rate, sigma):
             index=random.randint(0, Rowsize * Colsize - 1)
             puzzle[index][2] = (puzzle[index][2] + rotate_times) % 4
             puzzle[index][1]=puzzle[index][1][-rotate_times:]+puzzle[index][1][:-rotate_times]
-    puzzle=localSearch(puzzle)
+    # puzzle=localSearch(puzzle)
     return puzzle
 
 
@@ -367,8 +367,9 @@ def write_file(best_solution):
 
 def localSearch(puzzle):
     best_fitness = calculateFitness(puzzle)
-    best_puzzle = puzzle.copy()
-    for _ in range(100):  # 迭代次数
+    # print('input mutaition1:',best_fitness)
+    best_puzzle = copy.deepcopy(puzzle)
+    for zz in range(100):  # 迭代次数
         # 生成邻域解
         mutation_rate=0.9
         sigma=1.0
@@ -376,9 +377,26 @@ def localSearch(puzzle):
         fitness = calculateFitness(neighbor)
         if fitness < best_fitness:
             best_fitness = fitness
-            best_puzzle = neighbor.copy()
+            best_puzzle = copy.deepcopy(neighbor)
+    # print('output mutation1',calculateFitness(best_puzzle))
     return best_puzzle
 
+def localSearch2(puzzle):
+    best_fitness = calculateFitness(puzzle)
+    # print('input mutaition2:',best_fitness)
+    best_puzzle =copy.deepcopy(puzzle)
+    for zz in range(100):  # 迭代次数
+        # 生成邻域解
+        mutation_rate=0.9
+        sigma=1.0
+        neighbor = mutation2(puzzle.copy(),mutation_rate, sigma)
+        fitness = calculateFitness(neighbor.copy())
+        if fitness < best_fitness:
+            best_fitness = fitness
+            best_puzzle = copy.deepcopy(neighbor)
+    #         print('mutation2',calculateFitness(best_puzzle))
+    # print('output mutation2',calculateFitness(best_puzzle))
+    return best_puzzle
 
 def build_distance_matrix(population):
     dis_value=np.zeros((population_size, population_size)).tolist()
@@ -414,6 +432,7 @@ def main():
     mutation_rate=initial_mutation_rate
     sigma=initial_sigma
     Generation=0
+    fitness_list=[]
     while fitness_board[fitness_board.index(min(fitness_board))]>0 and Generation<maxGeneration:
         if previous_best_fitness != 0:    #self-adaptive mutayion
             improvement_rate = (previous_best_fitness - best_fitness) / previous_best_fitness
@@ -428,13 +447,17 @@ def main():
         
         for index,parent_select in enumerate(population):
             new_population=[]
-            parent1=parent_select
+            parent1=copy.deepcopy(parent_select)
             distance_matrix[index].sort(key=lambda x:x[0])
             select_index=random.randint(0,population_size-2)
-            parent2=population[distance_matrix[index][select_index][1]]
-            child1,child2=Crossover(parent1,parent2,2,2)
-            # child1,child2=EdgeRecombination(parent1,parent2)
-            # child1,child2=EdgeRecombination2D(parent1,parent2)
+            parent2=copy.deepcopy(population[distance_matrix[index][select_index][1]])
+            random_select=random.randint(0,100)
+            if random_select<20:
+                child1,child2=Crossover(parent1,parent2,3,3)
+            elif random_select<50:
+                child1,child2=EdgeRecombination(parent1,parent2)
+            else:
+                child1,child2=EdgeRecombination2D(parent1,parent2)
             child1=mutation1(child1,mutation_rate,sigma)
             child2=mutation1(child2,mutation_rate,sigma)
             child1=mutation2(child1,mutation_rate,sigma)
@@ -451,17 +474,29 @@ def main():
         #             break
         fitness_board=list(map(calculateFitness,population))
         best_fitness=min(fitness_board)
-        mismatch_Board=list(map(calculateMissmatch,population))
-        Generation+=1
-        print(f'Generation {Generation}: Best Fitness = {best_fitness} :Best Mismatch = {mismatch_Board[fitness_board.index(min(fitness_board))]}')
         best_individual=population[fitness_board.index(best_fitness)]
         best_individual=localSearch(best_individual)
+        # best_individual=localSearch2(best_individual)
         population[fitness_board.index(best_fitness)]=best_individual
-        # if Generation % 5 ==0:
-        #     population.sort(key=lambda x:calculateFitness(x))
-        #     num_replace = int(0.5 * population_size)
-        #     new_individuals = initialization()[:num_replace]
-        #     population[-num_replace:] = new_individuals
+        # print(f'bestindividual:{calculateFitness(best_individual)}')
+        fitness_board=list(map(calculateFitness,population))
+        best_fitness=min(fitness_board)
+        # print(f'Best Fitness = {best_fitness}')
+        fitness_board=list(map(calculateFitness,population))
+        best_fitness=min(fitness_board)
+        fitness_list.append(best_fitness)
+        mismatch_Board=list(map(calculateMissmatch,population))
+        Generation+=1
+        print(f'Generation {Generation}: Best Fitness = {best_fitness} :Best Mismatch = {mismatch_Board[fitness_board.index(best_fitness)]}')
+        if Generation % 3 ==0:
+            if best_fitness==fitness_list[-3]:
+                num_replace = int(0.9 * population_size)
+            else:
+                num_replace = int(0.5 * population_size)
+            population.sort(key=lambda x:calculateFitness(x))
+            
+            new_individuals = initialization()[:num_replace]
+            population[-num_replace:] = new_individuals
     best_solution=population[fitness_board.index(best_fitness)]
     write_file(best_solution)
 if __name__ == '__main__':
