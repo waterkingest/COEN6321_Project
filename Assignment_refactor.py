@@ -158,7 +158,7 @@ def self_adaptive_Pm(current_value,min_value,max_value,improvement_rate,threshol
 def mutation1(puzzle, mutation_rate, sigma):
     '''
     Exchange by block
-    Size 1x1,1x2,2x1,2x2.
+    Size 1x1,1x2,2x1,2x2. These sizes of blocks will be randomly selected.
     '''
     if random.random()<mutation_rate:
         swap_numb=int(sigma)
@@ -206,7 +206,7 @@ def mutation2(puzzle, mutation_rate, sigma):
         used_positions=set()
         num_blocks=int(sigma)
         for _ in range(num_blocks):
-            block_size=random.randint(1, 3)
+            block_size=random.randint(1, 3) #Block sizes are 1x1, 2x2, 3x3
             rows_block=cols_block=block_size
             # Trying to find blocks to prevent overlap
             for _ in range(100):
@@ -647,7 +647,7 @@ def VLNS(puzzle, k):
     # Step 3: Mark Remove Puzzle as Empty
     temp_puzzle = puzzle.copy()
     for idx in positions_indices:
-        temp_puzzle[idx] = None  # 标记为空
+        temp_puzzle[idx] = None  #Mark as empty
 
     n = len(removed_pieces)
     w_matrix = np.zeros((n, n))
@@ -837,7 +837,7 @@ if __name__ == '__main__':
     Rowsize=8
     Colsize=8
     children_Percent=0.4
-    VLNS_Size=21
+    VLNS_Size=21 # contorl the number of non-adjacent puzzle pieces removed and reinserted during each VLNS iteration.
     Window_Size=5
     population_size=int(input("Enter the population size [100,1000]: "))
     maxGeneration=int(input('Enter the maxGeneration [1,100]: '))
